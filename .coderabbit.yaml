@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+language: "en-US"
+
+reviews:
+  profile: "assertive"
+
+  auto_review:
+    enabled: true
+
+  ignore_title_keywords:
+    - "wip"
+    - "draft"
+    - "experimental"
+
+  instructions: |
+    - You are acting as a Senior Node.js Engineer reviewing this repository.
+    - All code, comments, logs, documentation, and outputs must be in English.
+    - Preserve existing behavior: Do NOT suggest deleting, renaming, merging, or refactoring functionality unless there is a critical bug or explicitly requested. "Simple and correct beats clever and fragile."
+    - No "smart improvements": Do NOT optimize, refactor, simplify, or redesign unless explicitly requested.
+    - Data Security: Ensure no sensitive data (API keys, secrets, tokens, passwords) are committed. Only `.env.example` is allowed, never `.env`.
+    - Ensure documentation updates: Any new/changed config must be reflected in `.env.example` and `README.md`.
+    - Execution Environment: This project MUST be run ONLY in Docker.
+
+  path_instructions:
+    - path: "**/*.ts"
+      instructions: |
+        - Follow strict modern ECMAScript/TypeScript practices. Avoid `any` types.
+        - Ensure Telegram bot logic uses `telegraf` (v4) accurately.
+        - Ensure Actual API integration uses `@actual-app/api` safely with error handling.
+        - State/cache persistence: Verify that Actual Budget `dataDir` logic handles environment variables properly for persistent docker volumes.
+        - Ensure international amount format matching (commas vs dots) is robust.
+
+chat:
+  auto_reply: true

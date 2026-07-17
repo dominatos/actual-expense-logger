@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: actual_expense_logger
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # We explicitly map the data dir to ensure Actual sync cache is persistent
+      - ACTUAL_DATA_DIR=/app/data
+    volumes:
+      - actual_bot_data:/app/data
+
+volumes:
+  actual_bot_data:
+    name: actual_bot_data
