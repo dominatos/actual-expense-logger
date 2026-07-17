@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   bot:
     build: .
@@ -8,11 +6,22 @@ services:
     env_file:
       - .env
     environment:
-      # We explicitly map the data dir to ensure Actual sync cache is persistent
       - ACTUAL_DATA_DIR=/app/data
     volumes:
       - actual_bot_data:/app/data
+    secrets:
+      - telegram_bot_token
+      - actual_password
+      - actual_file_password
 
 volumes:
   actual_bot_data:
     name: actual_bot_data
+
+secrets:
+  telegram_bot_token:
+    file: ./secrets/telegram_bot_token.txt
+  actual_password:
+    file: ./secrets/actual_password.txt
+  actual_file_password:
+    file: ./secrets/actual_file_password.txt

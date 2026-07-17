@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
 import * as dotenv from 'dotenv';
-import { parseUserIds } from './utils';
 
 dotenv.config();
 
@@ -10,7 +9,7 @@ dotenv.config();
  * the env var directly. This allows backward compatibility with .env
  * for local development while supporting Docker secrets in production.
  */
-export function readSecret(envKey: string): string | undefined {
+function readSecret(envKey: string): string | undefined {
   const fileKey = `${envKey}_FILE`;
   const filePath = process.env[fileKey];
   if (filePath) {
@@ -23,7 +22,7 @@ export function readSecret(envKey: string): string | undefined {
   return process.env[envKey];
 }
 
-export function requireSecret(envKey: string): string {
+function requireSecret(envKey: string): string {
   const value = readSecret(envKey);
   if (!value) {
     throw new Error(`Missing required environment variable or secret: ${envKey}`);
@@ -31,8 +30,18 @@ export function requireSecret(envKey: string): string {
   return value;
 }
 
-export function optional(envKey: string, defaultValue: string): string {
+function optional(envKey: string, defaultValue: string): string {
   return readSecret(envKey) || process.env[envKey] || defaultValue;
+}
+
+function parseUserIds(raw: string): number[] {
+  if (!raw) return [];
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map(Number)
+    .filter((n) => !isNaN(n));
 }
 
 export interface AppConfig {
