@@ -1,0 +1,29 @@
+# Configuration files
+.env
+.env.example
+.coderabbit.yaml
+
+# Logs & Temp
+*.log
+temp/
+
+# Node
+node_modules/
+
+# Data directory
+data/
+
+# Git
+.git/
+.gitignore
+
+# Documentation and metadata
+README.md
+INSTRUCTIONS.md
+prompt.txt
+review.md
+tofix.md
+history.txt
+fixprompt.md
+autofixprompt.md
+docker-compose.yml
