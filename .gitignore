@@ -1,0 +1,22 @@
+# Ignore all files in temp/ except .gitkeep
+temp/*
+!temp/.gitkeep
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Env files
+.env
+
+# AI Rules and Documentation
+INSTRUCTIONS.md
+prompt.txt
+fixprompt.md
+autofixprompt.md
+base-patterns.md
+review.md
+history.txt
+tofix.md
