@@ -1,6 +1,8 @@
 # Actual Budget Telegram Bot
 
-A production-ready Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
+> **DEV STATUS — NOT YET TESTED.** This project is under active development and has not been tested in a real environment yet. Use at your own risk. Do not use with production budgets until testing is complete.
+
+A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
 This bot allows you to quickly log expenses into Actual Budget directly from Telegram. It parses amounts, fetches your budget categories, and records a transaction in a default account.
 
