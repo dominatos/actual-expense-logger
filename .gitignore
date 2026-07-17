@@ -1,6 +1,7 @@
 # Ignore all files in temp/ except .gitkeep
 temp/*
 !temp/.gitkeep
+repo-to-analyze
 
 # Node modules
 node_modules/
@@ -20,3 +21,7 @@ base-patterns.md
 review.md
 history.txt
 tofix.md
+
+# AI files
+.mimocode/
+IMPLEMENTATION-PLAN.md
