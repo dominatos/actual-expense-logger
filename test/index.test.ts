@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { parseAmountToCents, parseUserIds } from '../src/utils';
-import { createAccessControlMiddleware } from '../src/index';
 import { Context } from 'telegraf';
+
+// Mock config to prevent loadConfig from throwing errors when src/index.ts is imported in CI
+vi.mock('../src/config', () => ({
+  loadConfig: () => ({
+    telegramBotToken: 'dummy_token',
+    accounts: [],
+    allowedUserIds: [],
+    actualPayeeName: 'Telegram Bot'
+  })
+}));
+
+import { createAccessControlMiddleware } from '../src/index';
 
 // We test the bot's behavior indirectly by testing the utility functions
 // and the mocked actual API. Full bot integration tests require a Telegram
