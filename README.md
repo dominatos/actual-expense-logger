@@ -1,14 +1,15 @@
 # Actual Budget Telegram Bot
 
-> **Status:** v1.2.1 — Tested with 66 unit tests and Docker deployment.
+> **Status:** v1.3.0 — Tested with 66 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
-This bot allows you to quickly log expenses into Actual Budget directly from Telegram. It parses amounts, fetches your budget categories, and records a transaction in a default account.
+This bot allows you to quickly log expenses into Actual Budget directly from Telegram. It parses amounts, fetches your budget categories, and records a transaction in a configurable account (or lets you pick from multiple accounts).
 
 ## Features
 - **Fast Expense Logging:** Send a number like `15`, `15.50`, or `15,5` to the bot.
 - **International Formats:** Supports US (`1,234.56`) and European (`1.234,56`) number formats.
+- **Multiple Accounts:** Configure multiple Actual Budget accounts and select which one to use per transaction. Single-account setups work automatically with no selection step.
 - **Category Selection:** An inline keyboard appears allowing you to pick a category for the expense.
 - **Idempotent Transactions:** In-flight guard prevents duplicate submissions from double-taps.
 - **Safety-First Design:** Every transaction is backed up recursively, then synced to the server immediately.
@@ -31,6 +32,9 @@ TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 ACTUAL_SERVER_URL=https://your-actual-server.example.com
 ACTUAL_PASSWORD=your_actual_password
 ACTUAL_SYNC_ID=your_actual_sync_id
+# Option A: multiple accounts (format: name:uuid,name:uuid)
+#ACTUAL_ACCOUNTS=Personal:uuid1,Business:uuid2
+# Option B: single account (used when ACTUAL_ACCOUNTS is not set)
 ACTUAL_DEFAULT_ACCOUNT_ID=your_account_id
 ACTUAL_DATA_DIR=/app/data
 ACTUAL_FILE_PASSWORD=your_budget_encryption_password
@@ -44,7 +48,8 @@ ALLOWED_TELEGRAM_USER_IDS=
 | `ACTUAL_SERVER_URL` | Yes | URL of your Actual Budget server |
 | `ACTUAL_PASSWORD` | Yes | Actual Budget server password |
 | `ACTUAL_SYNC_ID` | Yes | Budget sync ID (Settings > Advanced > Sync ID) |
-| `ACTUAL_DEFAULT_ACCOUNT_ID` | Yes | Account ID for new transactions |
+| `ACTUAL_ACCOUNTS` | No | Comma-separated `name:uuid` pairs for multiple accounts |
+| `ACTUAL_DEFAULT_ACCOUNT_ID` | Conditional | Account UUID (required when `ACTUAL_ACCOUNTS` is not set) |
 | `ACTUAL_DATA_DIR` | No (default `/app/data`) | Local cache directory for budget data |
 | `ACTUAL_FILE_PASSWORD` | No | Password for encrypted budget files |
 | `ACTUAL_PAYEE_NAME` | No (default `Telegram Bot`) | Payee name on created transactions |

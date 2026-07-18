@@ -10,12 +10,13 @@ const mocks = vi.hoisted(() => ({
   shutdown: vi.fn().mockResolvedValue(undefined),
   addTransactions: vi.fn().mockResolvedValue('ok'),
   getCategories: vi.fn().mockResolvedValue([]),
+  getAccounts: vi.fn().mockResolvedValue([]),
   loadConfig: vi.fn().mockReturnValue({
     telegramBotToken: 'test-token',
     actualServerUrl: 'http://localhost:5006',
     actualPassword: 'test-password',
     actualSyncId: 'test-sync-id',
-    actualDefaultAccountId: 'test-account-id',
+    accounts: [{ name: 'Default', id: 'test-account-id' }],
     actualDataDir: '/tmp/test-actual-data',
     actualFilePassword: undefined,
     actualPayeeName: 'Telegram Bot',
@@ -31,6 +32,7 @@ vi.mock('@actual-app/api', () => ({
     shutdown: mocks.shutdown,
     addTransactions: mocks.addTransactions,
     getCategories: mocks.getCategories,
+    getAccounts: mocks.getAccounts,
   },
 }));
 
@@ -39,7 +41,7 @@ vi.mock('../src/config', () => ({
 }));
 
 // Import after mocks are set up
-import { initActual, finalize, getCategories, addTransaction } from '../src/actual';
+import { initActual, finalize, getCategories, getAccounts, addTransaction } from '../src/actual';
 
 describe('initActual', () => {
   beforeEach(() => {
@@ -120,6 +122,39 @@ describe('getCategories', () => {
   });
 });
 
+describe('getAccounts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('filters out closed accounts', async () => {
+    mocks.getAccounts.mockResolvedValue([
+      { id: '1', name: 'Checking', closed: false },
+      { id: '2', name: 'Old Account', closed: true },
+      { id: '3', name: 'Savings', closed: false },
+    ]);
+
+    const result = await getAccounts();
+    expect(result).toHaveLength(2);
+    expect(result.map((a) => a.name)).toEqual(['Checking', 'Savings']);
+  });
+
+  it('returns id and name only', async () => {
+    mocks.getAccounts.mockResolvedValue([
+      { id: '1', name: 'Checking', offbudget: false, closed: false, balance_current: 5000 },
+    ]);
+
+    const result = await getAccounts();
+    expect(result).toEqual([{ id: '1', name: 'Checking' }]);
+  });
+
+  it('returns empty array when no accounts', async () => {
+    mocks.getAccounts.mockResolvedValue([]);
+    const result = await getAccounts();
+    expect(result).toEqual([]);
+  });
+});
+
 describe('addTransaction', () => {
   const testDir = '/tmp/test-backup-actual';
 
@@ -145,7 +180,7 @@ describe('addTransaction', () => {
       actualServerUrl: 'http://localhost:5006',
       actualPassword: 'test-password',
       actualSyncId: 'test-sync-id',
-      actualDefaultAccountId: 'test-account-id',
+      accounts: [{ name: 'Default', id: 'test-account-id' }],
       actualDataDir: testDir,
       actualFilePassword: undefined,
       actualPayeeName: 'Telegram Bot',
@@ -172,7 +207,7 @@ describe('addTransaction', () => {
       actualServerUrl: 'http://localhost:5006',
       actualPassword: 'test-password',
       actualSyncId: 'test-sync-id',
-      actualDefaultAccountId: 'test-account-id',
+      accounts: [{ name: 'Default', id: 'test-account-id' }],
       actualDataDir: testDir,
       actualFilePassword: undefined,
       actualPayeeName: 'Test Payee',
@@ -197,7 +232,7 @@ describe('addTransaction', () => {
       actualServerUrl: 'http://localhost:5006',
       actualPassword: 'test-password',
       actualSyncId: 'test-sync-id',
-      actualDefaultAccountId: 'test-account-id',
+      accounts: [{ name: 'Default', id: 'test-account-id' }],
       actualDataDir: testDir,
       actualFilePassword: undefined,
       actualPayeeName: 'Telegram Bot',
@@ -216,7 +251,7 @@ describe('addTransaction', () => {
       actualServerUrl: 'http://localhost:5006',
       actualPassword: 'test-password',
       actualSyncId: 'test-sync-id',
-      actualDefaultAccountId: 'test-account-id',
+      accounts: [{ name: 'Default', id: 'test-account-id' }],
       actualDataDir: testDir,
       actualFilePassword: undefined,
       actualPayeeName: 'Telegram Bot',

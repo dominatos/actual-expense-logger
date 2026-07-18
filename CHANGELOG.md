@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-18
+
+### Added
+
+- **Multiple account support** — configure multiple Actual Budget accounts via `ACTUAL_ACCOUNTS` env var (format: `name:uuid,name:uuid`). When multiple accounts are configured, the bot shows an inline keyboard to select the account before category selection.
+- `src/actual.ts` — new `getAccounts()` function wrapping `api.getAccounts()`, filtering out closed accounts.
+- `src/config.ts` — new `AccountEntry` interface and `parseAccounts()` helper. `AppConfig.accounts` replaces `actualDefaultAccountId`.
+- `src/index.ts` — account selection step in FSM (between amount input and category selection). Single-account setups auto-select with no UX change.
+- New env var `ACTUAL_ACCOUNTS` — comma-separated `name:uuid` pairs.
+
+### Changed
+
+- `ACTUAL_DEFAULT_ACCOUNT_ID` is now a fallback — if `ACTUAL_ACCOUNTS` is set, it takes precedence. Existing single-account setups continue to work without config changes.
+- `src/index.ts` — `SessionData` now includes `accountId`. Category handler validates both `amountInCents` and `accountId` from session.
+
 ## [1.2.1] - 2026-07-18
 
 ### Fixed

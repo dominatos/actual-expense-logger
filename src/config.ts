@@ -48,12 +48,36 @@ function parseUserIds(raw: string): number[] {
   return ids;
 }
 
+export interface AccountEntry {
+  name: string;
+  id: string;
+}
+
+export function parseAccounts(raw: string): AccountEntry[] {
+  if (!raw) return [];
+  const entries: AccountEntry[] = [];
+  const tokens = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  for (const token of tokens) {
+    const sepIndex = token.indexOf(':');
+    if (sepIndex === -1) {
+      throw new Error(`Invalid ACTUAL_ACCOUNTS entry "${token}": expected format "name:uuid"`);
+    }
+    const name = token.substring(0, sepIndex).trim();
+    const id = token.substring(sepIndex + 1).trim();
+    if (!name || !id) {
+      throw new Error(`Invalid ACTUAL_ACCOUNTS entry "${token}": name and uuid must not be empty`);
+    }
+    entries.push({ name, id });
+  }
+  return entries;
+}
+
 export interface AppConfig {
   telegramBotToken: string;
   actualServerUrl: string;
   actualPassword: string;
   actualSyncId: string;
-  actualDefaultAccountId: string;
+  accounts: AccountEntry[];
   actualDataDir: string;
   actualFilePassword: string | undefined;
   actualPayeeName: string;
@@ -69,7 +93,17 @@ export function loadConfig(): AppConfig {
   const actualServerUrl = requireSecret('ACTUAL_SERVER_URL');
   const actualPassword = requireSecret('ACTUAL_PASSWORD');
   const actualSyncId = requireSecret('ACTUAL_SYNC_ID');
-  const actualDefaultAccountId = requireSecret('ACTUAL_DEFAULT_ACCOUNT_ID');
+
+  // Backward compatibility: if ACTUAL_ACCOUNTS is set, use it.
+  // Otherwise fall back to ACTUAL_DEFAULT_ACCOUNT_ID (single "Default" account).
+  const accountsRaw = readSecret('ACTUAL_ACCOUNTS') || process.env.ACTUAL_ACCOUNTS || '';
+  let accounts: AccountEntry[];
+  if (accountsRaw) {
+    accounts = parseAccounts(accountsRaw);
+  } else {
+    const fallbackId = requireSecret('ACTUAL_DEFAULT_ACCOUNT_ID');
+    accounts = [{ name: 'Default', id: fallbackId }];
+  }
 
   const actualDataDir = optional('ACTUAL_DATA_DIR', '/app/data');
   const actualFilePassword = readSecret('ACTUAL_FILE_PASSWORD') || undefined;
@@ -83,7 +117,7 @@ export function loadConfig(): AppConfig {
     actualServerUrl,
     actualPassword,
     actualSyncId,
-    actualDefaultAccountId,
+    accounts,
     actualDataDir,
     actualFilePassword,
     actualPayeeName,
