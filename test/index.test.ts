@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { parseAmountToCents, parseUserIds } from '../src/utils';
+import { createAccessControlMiddleware } from '../src/index';
+import { Context } from 'telegraf';
 
 // We test the bot's behavior indirectly by testing the utility functions
 // and the mocked actual API. Full bot integration tests require a Telegram
@@ -25,25 +27,13 @@ describe('Bot Logic (unit tests)', () => {
   });
 
   describe('Access control logic', () => {
-    // Simulate the middleware logic from index.ts
-    const runMiddlewareSimulation = async (allowedUserIds: number[], userId: number, ctx: any, next: any) => {
-      if (allowedUserIds.length === 0) {
-        await ctx.reply("ALLOWED_TELEGRAM_USER_IDS parameter is not set.");
-        // Do not call next()
-      } else {
-        if (ctx.from && allowedUserIds.includes(ctx.from.id)) {
-          next();
-        }
-      }
-    };
-
     it('blocks user and sends warning when list is empty (secure mode)', async () => {
       const allowedUserIds: number[] = [];
-      const userId = 12345;
-      const ctx = { from: { id: userId }, reply: vi.fn() };
+      const ctx = { from: { id: 12345 }, reply: vi.fn() } as unknown as Context;
       const next = vi.fn();
       
-      await runMiddlewareSimulation(allowedUserIds, userId, ctx, next);
+      const middleware = createAccessControlMiddleware(allowedUserIds);
+      await middleware(ctx, next);
       
       expect(next).not.toHaveBeenCalled();
       expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('ALLOWED_TELEGRAM_USER_IDS parameter is not set'));
@@ -51,11 +41,11 @@ describe('Bot Logic (unit tests)', () => {
 
     it('allows user when ID is in the list', async () => {
       const allowedUserIds = [123, 456];
-      const userId = 123;
-      const ctx = { from: { id: userId }, reply: vi.fn() };
+      const ctx = { from: { id: 123 }, reply: vi.fn() } as unknown as Context;
       const next = vi.fn();
       
-      await runMiddlewareSimulation(allowedUserIds, userId, ctx, next);
+      const middleware = createAccessControlMiddleware(allowedUserIds);
+      await middleware(ctx, next);
       
       expect(next).toHaveBeenCalled();
       expect(ctx.reply).not.toHaveBeenCalled();
@@ -63,11 +53,11 @@ describe('Bot Logic (unit tests)', () => {
 
     it('blocks user when ID is not in the list', async () => {
       const allowedUserIds = [123, 456];
-      const userId = 789;
-      const ctx = { from: { id: userId }, reply: vi.fn() };
+      const ctx = { from: { id: 789 }, reply: vi.fn() } as unknown as Context;
       const next = vi.fn();
       
-      await runMiddlewareSimulation(allowedUserIds, userId, ctx, next);
+      const middleware = createAccessControlMiddleware(allowedUserIds);
+      await middleware(ctx, next);
       
       expect(next).not.toHaveBeenCalled();
       expect(ctx.reply).not.toHaveBeenCalled();

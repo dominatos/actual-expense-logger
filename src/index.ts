@@ -32,25 +32,29 @@ const bot = new Telegraf<BotContext>(config.telegramBotToken);
 // In-memory session for FSM state (amount -> [account ->] category selection)
 bot.use(session());
 
-// Access control: if ALLOWED_TELEGRAM_USER_IDS is set, only those users can use the bot
-if (config.allowedUserIds.length === 0) {
-  console.warn("WARNING: Bot started without ALLOWED_TELEGRAM_USER_IDS set! It is a bad idea to run without setting this parameter.");
-  bot.use(async (ctx, next) => {
-    try {
-      await ctx.reply("ALLOWED_TELEGRAM_USER_IDS parameter is not set. Operation not possible. Please go to @RawDataBot to get your ID and fill the parameters in your environment configuration.");
-    } catch (e) {
-      console.error("Failed to send warning message:", e);
-    }
-    // Do not call next() to block further execution
-  });
-} else {
-  bot.use((ctx, next) => {
-    if (ctx.from && config.allowedUserIds.includes(ctx.from.id)) {
+export function createAccessControlMiddleware(allowedUserIds: number[]) {
+  if (allowedUserIds.length === 0) {
+    console.warn("WARNING: Bot started without ALLOWED_TELEGRAM_USER_IDS set! It is a bad idea to run without setting this parameter.");
+    return async (ctx: Context, next: () => Promise<void>) => {
+      try {
+        await ctx.reply("ALLOWED_TELEGRAM_USER_IDS parameter is not set. Operation not possible. Please go to @RawDataBot to get your ID and fill the parameters in your environment configuration.");
+      } catch (e) {
+        console.error("Failed to send warning message:", e);
+      }
+      // Do not call next() to block further execution
+    };
+  }
+
+  return async (ctx: Context, next: () => Promise<void>) => {
+    if (ctx.from && allowedUserIds.includes(ctx.from.id)) {
       return next();
     }
     // Silently ignore unauthorized users
-  });
+  };
 }
+
+// Access control: if ALLOWED_TELEGRAM_USER_IDS is set, only those users can use the bot
+bot.use(createAccessControlMiddleware(config.allowedUserIds));
 
 // --- Amount parsing ---
 
@@ -266,4 +270,6 @@ async function start(): Promise<void> {
   }
 }
 
-start();
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}
