@@ -33,7 +33,17 @@ const bot = new Telegraf<BotContext>(config.telegramBotToken);
 bot.use(session());
 
 // Access control: if ALLOWED_TELEGRAM_USER_IDS is set, only those users can use the bot
-if (config.allowedUserIds.length > 0) {
+if (config.allowedUserIds.length === 0) {
+  console.warn("WARNING: Bot started without ALLOWED_TELEGRAM_USER_IDS set! It is a bad idea to run without setting this parameter.");
+  bot.use(async (ctx, next) => {
+    try {
+      await ctx.reply("ALLOWED_TELEGRAM_USER_IDS parameter is not set. Operation not possible. Please go to @RawDataBot to get your ID and fill the parameters in your environment configuration.");
+    } catch (e) {
+      console.error("Failed to send warning message:", e);
+    }
+    // Do not call next() to block further execution
+  });
+} else {
   bot.use((ctx, next) => {
     if (ctx.from && config.allowedUserIds.includes(ctx.from.id)) {
       return next();

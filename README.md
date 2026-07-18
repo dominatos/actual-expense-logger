@@ -1,6 +1,6 @@
 # Actual Budget Telegram Bot
 
-> **Status:** v1.3.0 — Tested with 66 unit tests and Docker deployment.
+> **Status:** v1.3.1 — Tested with 66 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
@@ -53,7 +53,7 @@ ALLOWED_TELEGRAM_USER_IDS=
 | `ACTUAL_DATA_DIR` | No (default `/app/data`) | Local cache directory for budget data |
 | `ACTUAL_FILE_PASSWORD` | No | Password for encrypted budget files |
 | `ACTUAL_PAYEE_NAME` | No (default `Telegram Bot`) | Payee name on created transactions |
-| `ALLOWED_TELEGRAM_USER_IDS` | No (empty = open) | Comma-separated Telegram user IDs to allow |
+| `ALLOWED_TELEGRAM_USER_IDS` | Yes | Comma-separated Telegram user IDs to allow (bot blocks all if empty) |
 
 ## Docker Secrets (Production)
 
