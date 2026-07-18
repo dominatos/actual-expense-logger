@@ -3,6 +3,13 @@ temp/*
 !temp/.gitkeep
 repo-to-analyze
 
+# Backups
+backup/
+
+# Helper scripts
+tofix-helper.py
+tofix-helper.md
+
 # Node modules
 node_modules/
 

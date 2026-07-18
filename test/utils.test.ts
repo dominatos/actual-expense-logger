@@ -131,8 +131,8 @@ describe('parseUserIds', () => {
     expect(parseUserIds('')).toEqual([]);
   });
 
-  it('filters out NaN values', () => {
-    expect(parseUserIds('123,abc,456')).toEqual([123, 456]);
+  it('throws on invalid tokens', () => {
+    expect(() => parseUserIds('123,abc,456')).toThrow('Invalid ALLOWED_TELEGRAM_USER_IDS token: "abc"');
   });
 
   it('filters out empty entries', () => {

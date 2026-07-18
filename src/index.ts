@@ -121,8 +121,18 @@ bot.on('text', async (ctx) => {
   }
 });
 
+// In-flight guard: prevent duplicate transaction submissions
+const pendingTransactions = new Set<string>();
+
 // Step 2: Category selection
 bot.action(/^cat_(.+)$/, async (ctx) => {
+  const submissionKey = `${ctx.chat?.id ?? 'unknown'}_${ctx.session?.amountInCents ?? 'none'}`;
+
+  if (pendingTransactions.has(submissionKey)) {
+    await ctx.answerCbQuery('Transaction already in progress. Please wait.', { show_alert: true });
+    return;
+  }
+
   try {
     const categoryId = ctx.match[1];
     const amountInCents = ctx.session?.amountInCents;
@@ -132,6 +142,7 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
       return;
     }
 
+    pendingTransactions.add(submissionKey);
     await ctx.answerCbQuery('Saving transaction...');
 
     // createTransaction: backup -> addTransaction -> sync
@@ -146,6 +157,8 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
   } catch (error) {
     console.error('Error adding transaction:', error);
     await ctx.reply('Failed to save the transaction.');
+  } finally {
+    pendingTransactions.delete(submissionKey);
   }
 });
 
@@ -154,8 +167,6 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
 async function start(): Promise<void> {
   try {
     await initActual();
-    console.log('Starting Telegram bot...');
-    bot.launch();
 
     // Graceful shutdown: sync + shutdown Actual API, then stop bot
     const shutdown = async (signal: string) => {
@@ -169,8 +180,13 @@ async function start(): Promise<void> {
       process.exit(0);
     };
 
+    // Register signal handlers before launch to catch early failures
     process.once('SIGINT', () => shutdown('SIGINT'));
     process.once('SIGTERM', () => shutdown('SIGTERM'));
+
+    console.log('Starting Telegram bot...');
+    await bot.launch();
+    console.log('Bot is running.');
   } catch (error) {
     console.error('Failed to start application:', error);
     process.exit(1);

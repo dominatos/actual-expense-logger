@@ -7,6 +7,9 @@ services:
       - .env
     environment:
       - ACTUAL_DATA_DIR=/app/data
+      - TELEGRAM_BOT_TOKEN_FILE=/run/secrets/telegram_bot_token
+      - ACTUAL_PASSWORD_FILE=/run/secrets/actual_password
+      - ACTUAL_FILE_PASSWORD_FILE=/run/secrets/actual_file_password
     volumes:
       - actual_bot_data:/app/data
     secrets:

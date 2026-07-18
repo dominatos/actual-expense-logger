@@ -1,6 +1,6 @@
 import api from '@actual-app/api';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync } from 'fs';
-import { join } from 'path';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync, statSync } from 'fs';
+import { join, relative } from 'path';
 import { loadConfig } from './config';
 
 /**
@@ -32,10 +32,14 @@ export async function initActual(): Promise<void> {
  */
 export async function finalize(): Promise<void> {
   console.log('Syncing changes to server...');
-  await api.sync();
-  console.log('Sync complete. Shutting down API...');
-  await api.shutdown();
-  console.log('API shut down.');
+  try {
+    await api.sync();
+    console.log('Sync complete.');
+  } finally {
+    console.log('Shutting down API...');
+    await api.shutdown();
+    console.log('API shut down.');
+  }
 }
 
 /**
@@ -51,18 +55,31 @@ function createBackup(dataDir: string): void {
   const snapshotDir = join(backupDir, `backup-${timestamp}`);
   mkdirSync(snapshotDir, { recursive: true });
 
-  const files = readdirSync(dataDir);
-  for (const file of files) {
-    if (file.endsWith('.sqlite') || file.endsWith('-journal') || file.endsWith('-wal') || file.endsWith('-shm')) {
-      try {
-        const content = readFileSync(join(dataDir, file));
-        writeFileSync(join(snapshotDir, file), content);
-      } catch {
-        // File may be locked or transient — skip silently
+  function copyRecursive(srcDir: string, destDir: string): void {
+    const entries = readdirSync(srcDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const srcPath = join(srcDir, entry.name);
+      const relPath = relative(dataDir, srcPath);
+
+      // Skip the backup directory itself
+      if (relPath.startsWith('backups')) continue;
+
+      if (entry.isDirectory()) {
+        mkdirSync(join(destDir, entry.name), { recursive: true });
+        copyRecursive(srcPath, join(destDir, entry.name));
+      } else if (
+        entry.name.endsWith('.sqlite') ||
+        entry.name.endsWith('-journal') ||
+        entry.name.endsWith('-wal') ||
+        entry.name.endsWith('-shm')
+      ) {
+        const content = readFileSync(srcPath);
+        writeFileSync(join(destDir, entry.name), content);
       }
     }
   }
 
+  copyRecursive(dataDir, snapshotDir);
   console.log(`Backup created at ${snapshotDir}`);
 
   // Rotate: keep only last 5 backups
@@ -80,8 +97,8 @@ function createBackup(dataDir: string): void {
       }
       rmdirSync(oldestPath);
       console.log(`Rotated old backup: ${oldest}`);
-    } catch {
-      // Best-effort cleanup
+    } catch (err) {
+      console.error(`Failed to rotate backup ${oldest}:`, err);
     }
   }
 }

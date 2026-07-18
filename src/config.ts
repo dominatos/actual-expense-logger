@@ -9,7 +9,7 @@ dotenv.config();
  * the env var directly. This allows backward compatibility with .env
  * for local development while supporting Docker secrets in production.
  */
-function readSecret(envKey: string): string | undefined {
+export function readSecret(envKey: string): string | undefined {
   const fileKey = `${envKey}_FILE`;
   const filePath = process.env[fileKey];
   if (filePath) {
@@ -22,7 +22,7 @@ function readSecret(envKey: string): string | undefined {
   return process.env[envKey];
 }
 
-function requireSecret(envKey: string): string {
+export function requireSecret(envKey: string): string {
   const value = readSecret(envKey);
   if (!value) {
     throw new Error(`Missing required environment variable or secret: ${envKey}`);
@@ -30,18 +30,22 @@ function requireSecret(envKey: string): string {
   return value;
 }
 
-function optional(envKey: string, defaultValue: string): string {
+export function optional(envKey: string, defaultValue: string): string {
   return readSecret(envKey) || process.env[envKey] || defaultValue;
 }
 
 function parseUserIds(raw: string): number[] {
   if (!raw) return [];
-  return raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map(Number)
-    .filter((n) => !isNaN(n));
+  const tokens = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const ids: number[] = [];
+  for (const token of tokens) {
+    const n = Number(token);
+    if (!Number.isSafeInteger(n) || n <= 0) {
+      throw new Error(`Invalid ALLOWED_TELEGRAM_USER_IDS token: "${token}"`);
+    }
+    ids.push(n);
+  }
+  return ids;
 }
 
 export interface AppConfig {

@@ -1,12 +1,13 @@
 {
   "name": "actual-expense-logger",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Telegram bot for adding transactions to Actual Budget",
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
     "@actual-app/api": "^26.7.0",
@@ -16,6 +17,7 @@
   "devDependencies": {
     "@types/node": "^20.12.11",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "vitest": "^4.1.10"
   }
 }

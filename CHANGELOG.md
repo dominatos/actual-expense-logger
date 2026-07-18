@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-18
+
+### Fixed
+- Disabled credential persistence in CI checkout actions (`persist-credentials: false`).
+- Corrected CHANGELOG test count for utils.test.ts (39 → 32).
+- Added vitest and test script to `package.json` (missing from devDependencies).
+- Exported `readSecret`, `requireSecret`, `optional` from `src/config.ts` (tests expected exports).
+
+### Changed
+- Used secure `umask 077` + prompted `printf` pattern for secret-file creation in README.md and TESTING.md.
+- Aligned backup verification path in TESTING.md (added Docker path alongside local path).
+- Added `*_FILE` environment variable mappings in `docker-compose.yml` for Docker secrets.
+- Set `module` and `moduleResolution` to `node16` in `tsconfig.json`.
+- `src/actual.ts` — `finalize()` now uses try/finally to ensure API shutdown even if sync fails.
+- `src/actual.ts` — `createBackup()` now traverses full dataDir tree recursively.
+- `src/actual.ts` — Backup rotation now logs errors instead of silently swallowing them.
+- `src/index.ts` — Added in-flight guard (`pendingTransactions` Set) to prevent duplicate transaction submissions.
+- `src/utils.ts` — `parseUserIds()` now validates tokens as positive safe integers, throws on malformed input.
+- `src/utils.ts` — `parseAmountToCents()` now validates entire input, distinguishes decimal from thousands separators.
+- `src/index.ts` — Signal handlers registered before `bot.launch()`, which is now awaited.
+- `.gitignore` — Added `backup/` and `tofix-helper` files.
+
 ## [1.2.0] - 2026-07-17
 
 ### Added
@@ -19,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Comprehensive test suite with 66 tests (vitest).
 - `src/utils.ts` — extracted `parseAmountToCents` and `parseUserIds` for testability.
-- `test/utils.test.ts` — 39 tests for amount parsing and user ID parsing.
+- `test/utils.test.ts` — 32 tests for amount parsing and user ID parsing.
 - `test/config.test.ts` — 8 tests for config loading and secret reading.
 - `test/actual.test.ts` — 11 tests for API integration (mocked).
 - `test/index.test.ts` — 15 tests for bot logic.
