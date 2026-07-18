@@ -1,6 +1,14 @@
 # Ignore all files in temp/ except .gitkeep
 temp/*
 !temp/.gitkeep
+repo-to-analyze
+
+# Backups
+backup/
+
+# Helper scripts
+tofix-helper.py
+tofix-helper.md
 
 # Node modules
 node_modules/
@@ -10,6 +18,11 @@ dist/
 
 # Env files
 .env
+.env.local
+.env.*.local
+
+# Secrets (Docker)
+secrets/
 
 # AI Rules and Documentation
 INSTRUCTIONS.md
@@ -20,3 +33,21 @@ base-patterns.md
 review.md
 history.txt
 tofix.md
+Building.md
+
+# AI files
+.mimocode/
+IMPLEMENTATION-PLAN.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Database files (should never be in repo)
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

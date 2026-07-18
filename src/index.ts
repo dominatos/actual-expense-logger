@@ -1,50 +1,58 @@
 import { Telegraf, session, Context } from 'telegraf';
-import * as dotenv from 'dotenv';
-import { initActual, getCategories, addTransaction } from './actual';
+import { loadConfig } from './config';
+import { initActual, getCategories, addTransaction, finalize } from './actual';
 
-dotenv.config();
+// --- Types ---
 
-// Define session data structure
 interface SessionData {
   amountInCents?: number;
 }
 
-// Extend Telegraf Context to include session
 interface BotContext extends Context {
   session?: SessionData;
 }
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
-if (!botToken) {
-  throw new Error('TELEGRAM_BOT_TOKEN is not defined');
+interface Category {
+  id: string;
+  name: string;
+  is_income: boolean;
+  hidden: boolean;
+  group_id: string;
 }
 
-const defaultAccountId = process.env.ACTUAL_DEFAULT_ACCOUNT_ID;
-if (!defaultAccountId) {
-  throw new Error('ACTUAL_DEFAULT_ACCOUNT_ID is not defined');
-}
+// --- Load config (validates all env vars at startup) ---
 
-const bot = new Telegraf<BotContext>(botToken);
+const config = loadConfig();
 
-// Use in-memory session to store state between amount input and category selection
+// --- Bot setup ---
+
+const bot = new Telegraf<BotContext>(config.telegramBotToken);
+
+// In-memory session for FSM state (amount -> category selection)
 bot.use(session());
 
+// Access control: if ALLOWED_TELEGRAM_USER_IDS is set, only those users can use the bot
+if (config.allowedUserIds.length > 0) {
+  bot.use((ctx, next) => {
+    if (ctx.from && config.allowedUserIds.includes(ctx.from.id)) {
+      return next();
+    }
+    // Silently ignore unauthorized users
+  });
+}
+
+// --- Amount parsing ---
+
 /**
- * Bulletproof regex/parsing helper function for the amount.
- * - Handles: 10.5 or 10,5 -> -1050
- * - Handles: 10 -> -1000
- * - Handles: 42.00- -> -4200
- * - Explicitly ignores symbols like currency signs or spaces.
+ * Parse a user-provided amount string into negative cents for Actual Budget.
+ * Handles: "15" -> -1500, "15.50" -> -1550, "15,5" -> -1550, "42.00-" -> -4200
+ * Ignores currency symbols, spaces, and other non-numeric characters.
  */
 function parseAmountToCents(text: string): number | null {
-  // Match any digits with optional decimal point/comma, and optional minus signs
   const match = text.match(/[-]?\d+([.,]\d+)?-?/);
   if (!match) return null;
 
-  // Replace comma with dot for standard JS parsing
   let numStr = match[0].replace(',', '.');
-
-  // Move trailing minus to the front if present
   if (numStr.endsWith('-')) {
     numStr = '-' + numStr.slice(0, -1);
   }
@@ -52,50 +60,44 @@ function parseAmountToCents(text: string): number | null {
   const parsed = parseFloat(numStr);
   if (isNaN(parsed)) return null;
 
-  // Regardless of sign, convert to negative cents representing an expense
+  // Convert to negative cents (expense)
   const cents = Math.round(Math.abs(parsed) * 100);
   return -cents;
 }
 
-// Global error handler
+// --- Error handler ---
+
 bot.catch((err, ctx) => {
-  console.error(`Ooops, encountered an error for ${ctx.updateType}`, err);
+  console.error(`Error for ${ctx.updateType}:`, err);
   ctx.reply('An unexpected error occurred. Please try again.').catch(console.error);
 });
+
+// --- Commands ---
 
 bot.start((ctx) => {
   ctx.reply('Welcome! Send me an expense amount (e.g. 15.50 or 42) to add a transaction.');
 });
 
-// Step 1: Amount Input handler
+// Step 1: Amount input
 bot.on('text', async (ctx) => {
   const text = ctx.message.text;
   const amountInCents = parseAmountToCents(text);
 
   if (amountInCents === null) {
-    // If not a number, maybe it's just a general chat, but for this bot we just ask for a valid number.
     return ctx.reply('Please send a valid amount (e.g., 15.50 or 15,5).');
   }
 
   try {
-    // Save amount in session state
     ctx.session ??= {};
     ctx.session.amountInCents = amountInCents;
 
-    // Fetch categories from Actual Budget
     const categories = await getCategories();
-    
-    // Filter out hidden or system categories if needed, but for simplicity we list them.
-    // Create inline keyboard buttons (max 2 per row for better mobile UI)
-    const buttons = [];
-    let row = [];
-    
-    // Sort categories by name alphabetically
-    const sortedCategories = categories
-      .filter((c: any) => !c.is_income && !c.hidden)
-      .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-    for (const cat of sortedCategories) {
+    // Build inline keyboard: 2 buttons per row
+    const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+    let row: Array<{ text: string; callback_data: string }> = [];
+
+    for (const cat of categories) {
       row.push({ text: cat.name, callback_data: `cat_${cat.id}` });
       if (row.length === 2) {
         buttons.push(row);
@@ -107,21 +109,30 @@ bot.on('text', async (ctx) => {
     }
 
     const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
-    
+
     await ctx.reply(`Amount: ${displayAmount}\nPlease select a category:`, {
       reply_markup: {
-        inline_keyboard: buttons
-      }
+        inline_keyboard: buttons,
+      },
     });
-
   } catch (error) {
     console.error('Error in text handler:', error);
-    ctx.reply('Failed to fetch categories or process the amount. Please ensure the bot is synced.');
+    ctx.reply('Failed to fetch categories. Please ensure the bot is synced.');
   }
 });
 
-// Step 2: Category Selection (Callback Query Handler)
+// In-flight guard: prevent duplicate transaction submissions
+const pendingTransactions = new Set<string>();
+
+// Step 2: Category selection
 bot.action(/^cat_(.+)$/, async (ctx) => {
+  const submissionKey = `${ctx.chat?.id ?? 'unknown'}_${ctx.session?.amountInCents ?? 'none'}`;
+
+  if (pendingTransactions.has(submissionKey)) {
+    await ctx.answerCbQuery('Transaction already in progress. Please wait.', { show_alert: true });
+    return;
+  }
+
   try {
     const categoryId = ctx.match[1];
     const amountInCents = ctx.session?.amountInCents;
@@ -131,37 +142,51 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
       return;
     }
 
-    // Acknowledge the button click immediately
+    pendingTransactions.add(submissionKey);
     await ctx.answerCbQuery('Saving transaction...');
 
-    // Save transaction via Actual API
-    await addTransaction(defaultAccountId, categoryId, amountInCents);
+    // createTransaction: backup -> addTransaction -> sync
+    await addTransaction(config.actualDefaultAccountId, categoryId, amountInCents, config.actualPayeeName);
 
-    // Clear session state
-    ctx.session.amountInCents = undefined;
+    if (ctx.session) {
+      ctx.session.amountInCents = undefined;
+    }
 
     const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
-    
-    // Edit the original message to show success
-    await ctx.editMessageText(`✅ Transaction of ${displayAmount} saved successfully!`);
-    
+    await ctx.editMessageText(`Transaction of ${displayAmount} saved successfully!`);
   } catch (error) {
     console.error('Error adding transaction:', error);
     await ctx.reply('Failed to save the transaction.');
+  } finally {
+    pendingTransactions.delete(submissionKey);
   }
 });
 
-// Initialize Actual Budget and start bot
-async function start() {
+// --- Startup ---
+
+async function start(): Promise<void> {
   try {
     await initActual();
-    
-    console.log('Starting Telegram bot...');
-    bot.launch();
 
-    // Enable graceful stop
-    process.once('SIGINT', () => bot.stop('SIGINT'));
-    process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    // Graceful shutdown: sync + shutdown Actual API, then stop bot
+    const shutdown = async (signal: string) => {
+      console.log(`Received ${signal}. Shutting down gracefully...`);
+      bot.stop(signal);
+      try {
+        await finalize();
+      } catch (err) {
+        console.error('Error during finalize:', err);
+      }
+      process.exit(0);
+    };
+
+    // Register signal handlers before launch to catch early failures
+    process.once('SIGINT', () => shutdown('SIGINT'));
+    process.once('SIGTERM', () => shutdown('SIGTERM'));
+
+    console.log('Starting Telegram bot...');
+    await bot.launch();
+    console.log('Bot is running.');
   } catch (error) {
     console.error('Failed to start application:', error);
     process.exit(1);

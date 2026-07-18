@@ -1,6 +1,6 @@
 # Testing Guide
 
-> **DEV STATUS — NOT YET TESTED.** This guide explains how to test the bot locally without affecting your production budget.
+> **Status:** v1.2.1 — This guide explains how to test the bot locally without affecting your production budget.
 
 ## Prerequisites
 
@@ -134,11 +134,14 @@ npm run dev
 |-------|----------------|
 | `15` | -1500 cents, shown as "15.00" |
 | `15.50` | -1550 cents, shown as "15.50" |
-| `15,5` | -1550 cents (comma handled) |
+| `15,5` | -1550 cents (comma as decimal) |
 | `42.00-` | -4200 cents (trailing minus) |
-| `$100` | -10000 cents (currency symbol ignored) |
+| `$100` | -10000 cents (currency symbol stripped) |
+| `1,234.56` | -123456 cents (US thousands format) |
+| `1.234,56` | -123456 cents (European format) |
 | `hello` | "Please send a valid amount" |
 | Empty session click | "Session expired" alert |
+| Double-tap category | "Transaction already in progress" alert |
 
 ---
 
@@ -155,18 +158,72 @@ npm run dev
 
 ## Step 9: Test Docker Deployment
 
-```bash
-# Build and run
-docker-compose up -d --build
+### Option A: With `.env` only (no Docker secrets)
 
-# Check logs
-docker-compose logs -f
+For local testing, you can skip Docker secrets. Create empty secret files so Docker doesn't fail:
 
-# Test the bot in Telegram (same as Step 6)
+1. Create empty secret files:
+   ```bash
+   mkdir -p secrets
+   printf "" > secrets/telegram_bot_token.txt
+   printf "" > secrets/actual_password.txt
+   printf "" > secrets/actual_file_password.txt
+   ```
 
-# Stop
-docker-compose down
-```
+2. Build and run:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. Check logs:
+   ```bash
+   docker compose logs -f
+   ```
+
+4. Test the bot in Telegram (same as Step 6)
+
+5. Stop:
+   ```bash
+   docker compose down
+   ```
+
+### Option B: With Docker secrets (production-like)
+
+1. Create the `secrets/` directory with restricted permissions:
+   ```bash
+   mkdir -p secrets
+   umask 077
+   printf "Enter Telegram bot token: " && read -r token && printf "%s" "$token" > secrets/telegram_bot_token.txt
+   printf "Enter Actual password: " && read -r pass && printf "%s" "$pass" > secrets/actual_password.txt
+   printf "Enter file password (empty if none): " && read -r fp && printf "%s" "$fp" > secrets/actual_file_password.txt
+   ```
+
+   > **Warning:** Do not commit the `secrets/` directory to version control.
+
+2. Build and run:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. Check logs:
+   ```bash
+   docker compose logs -f
+   ```
+
+4. Test the bot in Telegram
+
+5. Stop:
+   ```bash
+   docker compose down
+   ```
+
+### How Docker data persistence works
+
+- The bot's local budget cache is stored in the `actual_bot_data` Docker volume at `/app/data`
+- This persists across container restarts — the budget is NOT re-downloaded each time
+- Backups are created inside the container at `/app/data/backups/`
+- To inspect backups: `docker exec actual_expense_logger ls /app/data/backups/`
+- To remove all data: `docker volume rm actual_bot_data`
 
 ---
 
@@ -175,7 +232,11 @@ docker-compose down
 1. Send a transaction via the bot
 2. Check the data directory:
    ```bash
+   # Local testing (ACTUAL_DATA_DIR=/tmp/actual-test-data)
    ls -la /tmp/actual-test-data/backups/
+
+   # Docker testing
+   docker exec actual_expense_logger ls /app/data/backups/
    ```
 3. You should see a `backup-<timestamp>/` directory containing:
    - `*.sqlite` files (the budget database snapshot)

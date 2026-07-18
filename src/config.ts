@@ -1,6 +1,5 @@
 import { readFileSync } from 'fs';
 import * as dotenv from 'dotenv';
-import { parseUserIds } from './utils';
 
 dotenv.config();
 
@@ -33,6 +32,20 @@ export function requireSecret(envKey: string): string {
 
 export function optional(envKey: string, defaultValue: string): string {
   return readSecret(envKey) || process.env[envKey] || defaultValue;
+}
+
+function parseUserIds(raw: string): number[] {
+  if (!raw) return [];
+  const tokens = raw.split(',').map((s) => s.trim()).filter(Boolean);
+  const ids: number[] = [];
+  for (const token of tokens) {
+    const n = Number(token);
+    if (!Number.isSafeInteger(n) || n <= 0) {
+      throw new Error(`Invalid ALLOWED_TELEGRAM_USER_IDS token: "${token}"`);
+    }
+    ids.push(n);
+  }
+  return ids;
 }
 
 export interface AppConfig {
