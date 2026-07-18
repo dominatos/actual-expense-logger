@@ -134,4 +134,16 @@ describe('parseAccounts', () => {
     const result = parseAccounts('My:Account:uuid-1');
     expect(result).toEqual([{ name: 'My', id: 'Account:uuid-1' }]);
   });
+
+  it('returns empty array for whitespace-only input', () => {
+    expect(parseAccounts('   ')).toEqual([]);
+  });
+
+  it('returns empty array for delimiter-only input', () => {
+    expect(parseAccounts(' , , ')).toEqual([]);
+  });
+
+  it('returns empty array for single comma', () => {
+    expect(parseAccounts(',')).toEqual([]);
+  });
 });

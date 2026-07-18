@@ -96,10 +96,13 @@ export function loadConfig(): AppConfig {
 
   // Backward compatibility: if ACTUAL_ACCOUNTS is set, use it.
   // Otherwise fall back to ACTUAL_DEFAULT_ACCOUNT_ID (single "Default" account).
-  const accountsRaw = readSecret('ACTUAL_ACCOUNTS') || process.env.ACTUAL_ACCOUNTS || '';
+  const accountsRaw = (readSecret('ACTUAL_ACCOUNTS') || process.env.ACTUAL_ACCOUNTS || '').trim();
   let accounts: AccountEntry[];
   if (accountsRaw) {
     accounts = parseAccounts(accountsRaw);
+    if (accounts.length === 0) {
+      throw new Error('ACTUAL_ACCOUNTS is set but contains no valid "name:uuid" entries');
+    }
   } else {
     const fallbackId = requireSecret('ACTUAL_DEFAULT_ACCOUNT_ID');
     accounts = [{ name: 'Default', id: fallbackId }];
