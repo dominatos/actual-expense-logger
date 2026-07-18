@@ -25,26 +25,52 @@ describe('Bot Logic (unit tests)', () => {
   });
 
   describe('Access control logic', () => {
-    it('allows user when list is empty (open mode)', () => {
+    // Simulate the middleware logic from index.ts
+    const runMiddlewareSimulation = async (allowedUserIds: number[], userId: number, ctx: any, next: any) => {
+      if (allowedUserIds.length === 0) {
+        await ctx.reply("ALLOWED_TELEGRAM_USER_IDS parameter is not set.");
+        // Do not call next()
+      } else {
+        if (ctx.from && allowedUserIds.includes(ctx.from.id)) {
+          next();
+        }
+      }
+    };
+
+    it('blocks user and sends warning when list is empty (secure mode)', async () => {
       const allowedUserIds: number[] = [];
       const userId = 12345;
-      // When list is empty, middleware is not registered, so all users pass
-      const shouldAllow = allowedUserIds.length === 0 || allowedUserIds.includes(userId);
-      expect(shouldAllow).toBe(true);
+      const ctx = { from: { id: userId }, reply: vi.fn() };
+      const next = vi.fn();
+      
+      await runMiddlewareSimulation(allowedUserIds, userId, ctx, next);
+      
+      expect(next).not.toHaveBeenCalled();
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining('ALLOWED_TELEGRAM_USER_IDS parameter is not set'));
     });
 
-    it('allows user when ID is in the list', () => {
+    it('allows user when ID is in the list', async () => {
       const allowedUserIds = [123, 456];
       const userId = 123;
-      const shouldAllow = allowedUserIds.length === 0 || allowedUserIds.includes(userId);
-      expect(shouldAllow).toBe(true);
+      const ctx = { from: { id: userId }, reply: vi.fn() };
+      const next = vi.fn();
+      
+      await runMiddlewareSimulation(allowedUserIds, userId, ctx, next);
+      
+      expect(next).toHaveBeenCalled();
+      expect(ctx.reply).not.toHaveBeenCalled();
     });
 
-    it('blocks user when ID is not in the list', () => {
+    it('blocks user when ID is not in the list', async () => {
       const allowedUserIds = [123, 456];
       const userId = 789;
-      const shouldAllow = allowedUserIds.length === 0 || allowedUserIds.includes(userId);
-      expect(shouldAllow).toBe(false);
+      const ctx = { from: { id: userId }, reply: vi.fn() };
+      const next = vi.fn();
+      
+      await runMiddlewareSimulation(allowedUserIds, userId, ctx, next);
+      
+      expect(next).not.toHaveBeenCalled();
+      expect(ctx.reply).not.toHaveBeenCalled();
     });
   });
 
