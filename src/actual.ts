@@ -115,6 +115,16 @@ export async function getCategories(): Promise<Array<{ id: string; name: string;
 }
 
 /**
+ * Fetch non-closed accounts from Actual Budget.
+ */
+export async function getAccounts(): Promise<Array<{ id: string; name: string }>> {
+  const result = await api.getAccounts();
+  return result
+    .filter((a) => !a.closed)
+    .map((a) => ({ id: a.id, name: a.name }));
+}
+
+/**
  * Add a transaction with pre-write backup and post-write sync.
  * Safety lifecycle: backup -> addTransaction -> sync
  */

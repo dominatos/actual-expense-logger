@@ -1,11 +1,12 @@
 import { Telegraf, session, Context } from 'telegraf';
 import { loadConfig } from './config';
-import { initActual, getCategories, addTransaction, finalize } from './actual';
+import { initActual, getCategories, getAccounts, addTransaction, finalize } from './actual';
 
 // --- Types ---
 
 interface SessionData {
   amountInCents?: number;
+  accountId?: string;
 }
 
 interface BotContext extends Context {
@@ -28,7 +29,7 @@ const config = loadConfig();
 
 const bot = new Telegraf<BotContext>(config.telegramBotToken);
 
-// In-memory session for FSM state (amount -> category selection)
+// In-memory session for FSM state (amount -> [account ->] category selection)
 bot.use(session());
 
 // Access control: if ALLOWED_TELEGRAM_USER_IDS is set, only those users can use the bot
@@ -78,6 +79,33 @@ bot.start((ctx) => {
   ctx.reply('Welcome! Send me an expense amount (e.g. 15.50 or 42) to add a transaction.');
 });
 
+// Helper: show category selection keyboard
+async function sendCategorySelection(ctx: BotContext, amountInCents: number): Promise<void> {
+  const categories = await getCategories();
+
+  const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+  let row: Array<{ text: string; callback_data: string }> = [];
+
+  for (const cat of categories) {
+    row.push({ text: cat.name, callback_data: `cat_${cat.id}` });
+    if (row.length === 2) {
+      buttons.push(row);
+      row = [];
+    }
+  }
+  if (row.length > 0) {
+    buttons.push(row);
+  }
+
+  const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
+
+  await ctx.reply(`Amount: ${displayAmount}\nPlease select a category:`, {
+    reply_markup: {
+      inline_keyboard: buttons,
+    },
+  });
+}
+
 // Step 1: Amount input
 bot.on('text', async (ctx) => {
   const text = ctx.message.text;
@@ -91,40 +119,73 @@ bot.on('text', async (ctx) => {
     ctx.session ??= {};
     ctx.session.amountInCents = amountInCents;
 
-    const categories = await getCategories();
+    const accounts = config.accounts;
 
-    // Build inline keyboard: 2 buttons per row
-    const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
-    let row: Array<{ text: string; callback_data: string }> = [];
+    if (accounts.length === 1) {
+      // Single account: auto-select and go straight to categories
+      ctx.session.accountId = accounts[0].id;
+      await sendCategorySelection(ctx, amountInCents);
+    } else {
+      // Multiple accounts: show account selection first
+      const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
+      let row: Array<{ text: string; callback_data: string }> = [];
 
-    for (const cat of categories) {
-      row.push({ text: cat.name, callback_data: `cat_${cat.id}` });
-      if (row.length === 2) {
-        buttons.push(row);
-        row = [];
+      for (const account of accounts) {
+        row.push({ text: account.name, callback_data: `acc_${account.id}` });
+        if (row.length === 2) {
+          buttons.push(row);
+          row = [];
+        }
       }
-    }
-    if (row.length > 0) {
-      buttons.push(row);
-    }
+      if (row.length > 0) {
+        buttons.push(row);
+      }
 
-    const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
+      const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
 
-    await ctx.reply(`Amount: ${displayAmount}\nPlease select a category:`, {
-      reply_markup: {
-        inline_keyboard: buttons,
-      },
-    });
+      await ctx.reply(`Amount: ${displayAmount}\nPlease select an account:`, {
+        reply_markup: {
+          inline_keyboard: buttons,
+        },
+      });
+    }
   } catch (error) {
     console.error('Error in text handler:', error);
-    ctx.reply('Failed to fetch categories. Please ensure the bot is synced.');
+    ctx.reply('Failed to fetch accounts. Please ensure the bot is synced.');
   }
 });
 
 // In-flight guard: prevent duplicate transaction submissions
 const pendingTransactions = new Set<string>();
 
-// Step 2: Category selection
+// Step 2: Account selection (only when multiple accounts are configured)
+bot.action(/^acc_(.+)$/, async (ctx) => {
+  try {
+    const accountId = ctx.match[1];
+    const amountInCents = ctx.session?.amountInCents;
+
+    if (amountInCents === undefined) {
+      await ctx.answerCbQuery('Session expired. Please send the amount again.', { show_alert: true });
+      return;
+    }
+
+    if (ctx.session) {
+      ctx.session.accountId = accountId;
+    }
+
+    await ctx.answerCbQuery();
+
+    // Now show category selection
+    const accountName = config.accounts.find((a) => a.id === accountId)?.name ?? accountId;
+    await ctx.editMessageText(`Account: ${accountName}`);
+    await sendCategorySelection(ctx, amountInCents);
+  } catch (error) {
+    console.error('Error in account selection:', error);
+    await ctx.reply('Failed to process account selection. Please try again.');
+  }
+});
+
+// Step 3: Category selection
 bot.action(/^cat_(.+)$/, async (ctx) => {
   const submissionKey = `${ctx.chat?.id ?? 'unknown'}_${ctx.session?.amountInCents ?? 'none'}`;
 
@@ -136,8 +197,9 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
   try {
     const categoryId = ctx.match[1];
     const amountInCents = ctx.session?.amountInCents;
+    const accountId = ctx.session?.accountId;
 
-    if (amountInCents === undefined) {
+    if (amountInCents === undefined || accountId === undefined) {
       await ctx.answerCbQuery('Session expired. Please send the amount again.', { show_alert: true });
       return;
     }
@@ -146,10 +208,11 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
     await ctx.answerCbQuery('Saving transaction...');
 
     // createTransaction: backup -> addTransaction -> sync
-    await addTransaction(config.actualDefaultAccountId, categoryId, amountInCents, config.actualPayeeName);
+    await addTransaction(accountId, categoryId, amountInCents, config.actualPayeeName);
 
     if (ctx.session) {
       ctx.session.amountInCents = undefined;
+      ctx.session.accountId = undefined;
     }
 
     const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);

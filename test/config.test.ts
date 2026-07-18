@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { readFileSync } from 'fs';
-import { readSecret, requireSecret, optional } from '../src/config';
+import { readSecret, requireSecret, optional, parseAccounts } from '../src/config';
 import { parseUserIds } from '../src/utils';
 
 // We test readSecret/requireSecret/optional directly since they're now exported.
@@ -89,5 +89,61 @@ describe('optional', () => {
 describe('parseUserIds (via utils)', () => {
   it('is imported correctly from utils', () => {
     expect(typeof parseUserIds).toBe('function');
+  });
+});
+
+describe('parseAccounts', () => {
+  it('parses multiple accounts', () => {
+    const result = parseAccounts('Personal:uuid-1,Business:uuid-2');
+    expect(result).toEqual([
+      { name: 'Personal', id: 'uuid-1' },
+      { name: 'Business', id: 'uuid-2' },
+    ]);
+  });
+
+  it('parses single account', () => {
+    const result = parseAccounts('Checking:abc-123');
+    expect(result).toEqual([{ name: 'Checking', id: 'abc-123' }]);
+  });
+
+  it('returns empty array for empty string', () => {
+    expect(parseAccounts('')).toEqual([]);
+  });
+
+  it('trims whitespace around names and ids', () => {
+    const result = parseAccounts(' Personal : uuid-1 , Business : uuid-2 ');
+    expect(result).toEqual([
+      { name: 'Personal', id: 'uuid-1' },
+      { name: 'Business', id: 'uuid-2' },
+    ]);
+  });
+
+  it('throws on entry without colon separator', () => {
+    expect(() => parseAccounts('InvalidEntry')).toThrow('expected format "name:uuid"');
+  });
+
+  it('throws on entry with empty name', () => {
+    expect(() => parseAccounts(':uuid-1')).toThrow('name and uuid must not be empty');
+  });
+
+  it('throws on entry with empty uuid', () => {
+    expect(() => parseAccounts('Personal:')).toThrow('name and uuid must not be empty');
+  });
+
+  it('handles names containing colons (takes last colon as separator)', () => {
+    const result = parseAccounts('My:Account:uuid-1');
+    expect(result).toEqual([{ name: 'My:Account', id: 'uuid-1' }]);
+  });
+
+  it('returns empty array for whitespace-only input', () => {
+    expect(parseAccounts('   ')).toEqual([]);
+  });
+
+  it('returns empty array for delimiter-only input', () => {
+    expect(parseAccounts(' , , ')).toEqual([]);
+  });
+
+  it('returns empty array for single comma', () => {
+    expect(parseAccounts(',')).toEqual([]);
   });
 });
