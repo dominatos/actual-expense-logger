@@ -155,18 +155,77 @@ npm run dev
 
 ## Step 9: Test Docker Deployment
 
-```bash
-# Build and run
-docker-compose up -d --build
+### Option A: With `.env` only (no Docker secrets)
 
-# Check logs
-docker-compose logs -f
+For local testing, you can skip Docker secrets. The bot falls back to `.env` values automatically.
 
-# Test the bot in Telegram (same as Step 6)
+1. Temporarily remove the `secrets:` block from `docker-compose.yml`:
+   ```yaml
+   services:
+     bot:
+       build: .
+       container_name: actual_expense_logger
+       restart: unless-stopped
+       env_file:
+         - .env
+       environment:
+         - ACTUAL_DATA_DIR=/app/data
+       volumes:
+         - actual_bot_data:/app/data
+       # secrets:  <-- comment out or remove for testing
+   ```
 
-# Stop
-docker-compose down
-```
+2. Build and run:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. Check logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
+4. Test the bot in Telegram (same as Step 6)
+
+5. Stop:
+   ```bash
+   docker-compose down
+   ```
+
+### Option B: With Docker secrets (production-like)
+
+1. Create the `secrets/` directory:
+   ```bash
+   mkdir -p secrets
+   echo "your_telegram_token" > secrets/telegram_bot_token.txt
+   echo "your_actual_password" > secrets/actual_password.txt
+   echo "" > secrets/actual_file_password.txt
+   ```
+
+2. Build and run:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. Check logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
+4. Test the bot in Telegram
+
+5. Stop:
+   ```bash
+   docker-compose down
+   ```
+
+### How Docker data persistence works
+
+- The bot's local budget cache is stored in the `actual_bot_data` Docker volume at `/app/data`
+- This persists across container restarts — the budget is NOT re-downloaded each time
+- Backups are created inside the container at `/app/data/backups/`
+- To inspect backups: `docker exec actual_expense_logger ls /app/data/backups/`
+- To remove all data: `docker volume rm actual_bot_data`
 
 ---
 
