@@ -23,12 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.1] - 2026-07-18
 
 ### Fixed
+
 - Disabled credential persistence in CI checkout actions (`persist-credentials: false`).
 - Corrected CHANGELOG test count for utils.test.ts (39 → 32).
 - Added vitest and test script to `package.json` (missing from devDependencies).
 - Exported `readSecret`, `requireSecret`, `optional` from `src/config.ts` (tests expected exports).
 
 ### Changed
+
 - Used secure `umask 077` + prompted `printf` pattern for secret-file creation in README.md and TESTING.md.
 - Aligned backup verification path in TESTING.md (added Docker path alongside local path).
 - Added `*_FILE` environment variable mappings in `docker-compose.yml` for Docker secrets.
@@ -45,15 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-07-17
 
 ### Added
+
 - Docker testing instructions in TESTING.md (Option A: .env only, Option B: Docker secrets).
 - `secrets/` directory with placeholder files for Docker secrets.
 
 ### Changed
+
 - `.env.example` updated with new variables (ACTUAL_FILE_PASSWORD, ACTUAL_PAYEE_NAME, ALLOWED_TELEGRAM_USER_IDS).
 
 ## [1.1.0] - 2026-07-17
 
 ### Added
+
 - Comprehensive test suite with 66 tests (vitest).
 - `src/utils.ts` — extracted `parseAmountToCents` and `parseUserIds` for testability.
 - `test/utils.test.ts` — 32 tests for amount parsing and user ID parsing.
@@ -64,12 +69,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `vitest.config.ts` — test configuration.
 
 ### Changed
+
 - `src/config.ts` — exported helper functions, imported `parseUserIds` from utils.
 - `src/index.ts` — imported `parseAmountToCents` from utils.
 
 ## [1.0.0] - 2026-07-17
 
 ### Added
+
 - `src/config.ts` — centralized config validator with Docker secrets support (`_FILE` suffix).
 - `finalize()` function — `sync()` + `shutdown()` for graceful shutdown.
 - Pre-write SQLite backups with rotation (max 5 backups).
@@ -80,6 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `version.txt` for version tracking.
 
 ### Changed
+
 - `src/actual.ts` — rewrote with sync-after-write, backup-before-write lifecycle.
 - `src/index.ts` — removed all `any` types, added access control middleware, graceful shutdown.
 - `docker-compose.yml` — removed deprecated `version` key, added Docker secrets section.
@@ -87,6 +95,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `package.json` — upgraded `@actual-app/api` from `^6.10.1` to `^26.7.0`.
 
 ### Fixed
+
 - Missing `sync()` call after `addTransaction()` (data loss on restart).
 - Missing `shutdown()` on process exit.
 - TypeScript `any` types in category filtering.
@@ -99,6 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-07-17
 
 ### Added
+
 - Initial project setup with TypeScript, Telegraf, `@actual-app/api`.
 - `src/index.ts` — Telegram bot with FSM for expense logging.
 - `src/actual.ts` — Actual Budget API integration.

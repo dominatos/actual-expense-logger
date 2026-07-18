@@ -60,6 +60,7 @@ ALLOWED_TELEGRAM_USER_IDS=
 For production, sensitive values can be injected via Docker secrets instead of `.env`:
 
 1. Create a `secrets/` directory with restricted permissions:
+
    ```bash
    mkdir -p secrets
    umask 077
@@ -111,5 +112,3 @@ On shutdown (`SIGINT`/`SIGTERM`), the bot calls `sync()` + `shutdown()` in a try
 
 Duplicate submissions are prevented by an in-flight guard — if a transaction is already being processed, subsequent taps are rejected.
 
-## Development Workflow with AI
-This repository uses the `INSTRUCTIONS.md` and `prompt.txt` workflow for AI-assisted development. Paste the contents of `prompt.txt` into an AI chat session to set the context and rules for modifications.
