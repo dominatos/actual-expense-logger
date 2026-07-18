@@ -130,9 +130,9 @@ describe('parseAccounts', () => {
     expect(() => parseAccounts('Personal:')).toThrow('name and uuid must not be empty');
   });
 
-  it('handles names containing colons (takes first colon as separator)', () => {
+  it('handles names containing colons (takes last colon as separator)', () => {
     const result = parseAccounts('My:Account:uuid-1');
-    expect(result).toEqual([{ name: 'My', id: 'Account:uuid-1' }]);
+    expect(result).toEqual([{ name: 'My:Account', id: 'uuid-1' }]);
   });
 
   it('returns empty array for whitespace-only input', () => {

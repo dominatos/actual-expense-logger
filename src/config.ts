@@ -58,7 +58,7 @@ export function parseAccounts(raw: string): AccountEntry[] {
   const entries: AccountEntry[] = [];
   const tokens = raw.split(',').map((s) => s.trim()).filter(Boolean);
   for (const token of tokens) {
-    const sepIndex = token.indexOf(':');
+    const sepIndex = token.lastIndexOf(':');
     if (sepIndex === -1) {
       throw new Error(`Invalid ACTUAL_ACCOUNTS entry "${token}": expected format "name:uuid"`);
     }
