@@ -1,5 +1,5 @@
 import api from '@actual-app/api';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync, statSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync, statSync, rmSync } from 'fs';
 import { join, relative } from 'path';
 import { loadConfig } from './config';
 
@@ -91,11 +91,7 @@ function createBackup(dataDir: string): void {
     const oldest = backups.shift()!;
     const oldestPath = join(backupDir, oldest);
     try {
-      const contents = readdirSync(oldestPath);
-      for (const f of contents) {
-        unlinkSync(join(oldestPath, f));
-      }
-      rmdirSync(oldestPath);
+      rmSync(oldestPath, { recursive: true, force: true });
       console.log(`Rotated old backup: ${oldest}`);
     } catch (err) {
       console.error(`Failed to rotate backup ${oldest}:`, err);
@@ -142,8 +138,9 @@ export async function addTransaction(
   createBackup(config.actualDataDir);
 
   // Step 2: Add transaction
-  console.log('Adding transaction...');
-  await api.addTransactions(accountId, [
+  console.log(`Adding transaction: accountId=${accountId}, category=${categoryId}, amount=${amountInCents}, payee=${payeeName}, date=${date}`);
+
+  const transIds = await api.addTransactions(accountId, [
     {
       date,
       amount: amountInCents,
@@ -151,6 +148,14 @@ export async function addTransaction(
       payee_name: payeeName,
     },
   ]);
+
+  // Step 2b: Force-update category to bypass Actual Budget's runRules
+  // (rules may override the category we set during addTransactions)
+  if (transIds && transIds.length > 0) {
+    const transId = transIds[0];
+    console.log(`Updating category for transaction ${transId} to ${categoryId}`);
+    await api.updateTransaction(transId, { category: categoryId });
+  }
 
   // Step 3: Sync to server immediately
   console.log('Syncing to server...');

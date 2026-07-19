@@ -92,6 +92,57 @@ describe('parseUserIds (via utils)', () => {
   });
 });
 
+describe('OCR/AI config (via optional/readSecret)', () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('aiProvider is undefined when AI_PROVIDER not set', () => {
+    delete process.env['AI_PROVIDER'];
+    const raw = optional('AI_PROVIDER', '').toLowerCase();
+    const aiProvider = raw === 'ollama' ? 'ollama' : raw === 'openai' ? 'openai' : undefined;
+    expect(aiProvider).toBeUndefined();
+  });
+
+  it('aiProvider is ollama when AI_PROVIDER=ollama', () => {
+    process.env['AI_PROVIDER'] = 'ollama';
+    const raw = optional('AI_PROVIDER', '').toLowerCase();
+    const aiProvider = raw === 'ollama' ? 'ollama' : raw === 'openai' ? 'openai' : undefined;
+    expect(aiProvider).toBe('ollama');
+  });
+
+  it('aiProvider is openai when AI_PROVIDER=openai', () => {
+    process.env['AI_PROVIDER'] = 'openai';
+    const raw = optional('AI_PROVIDER', '').toLowerCase();
+    const aiProvider = raw === 'ollama' ? 'ollama' : raw === 'openai' ? 'openai' : undefined;
+    expect(aiProvider).toBe('openai');
+  });
+
+  it('ollamaUrl defaults to docker host URL', () => {
+    delete process.env['OLLAMA_URL'];
+    expect(optional('OLLAMA_URL', 'http://host.docker.internal:11434/api/generate'))
+      .toBe('http://host.docker.internal:11434/api/generate');
+  });
+
+  it('ocrLanguage defaults to eng', () => {
+    delete process.env['OCR_LANGUAGE'];
+    expect(optional('OCR_LANGUAGE', 'eng')).toBe('eng');
+  });
+
+  it('ocrCacheDir defaults to actualDataDir/ocr-cache', () => {
+    delete process.env['OCR_CACHE_DIR'];
+    const actualDataDir = optional('ACTUAL_DATA_DIR', '/app/data');
+    const ocrCacheDir = optional('OCR_CACHE_DIR', `${actualDataDir}/ocr-cache`);
+    expect(ocrCacheDir).toBe('/app/data/ocr-cache');
+  });
+});
+
 describe('parseAccounts', () => {
   it('parses multiple accounts', () => {
     const result = parseAccounts('Personal:uuid-1,Business:uuid-2');

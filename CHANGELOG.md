@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-19
+
+### Added
+
+- **OCR + AI Screenshot Processing** — Send a payment screenshot to the bot and it will extract the amount using OCR (tesseract.js), then use AI (Ollama or OpenAI) to match it to an existing Actual Budget category. User confirms before saving.
+- **Caption Override** — Send a screenshot with a caption like `15.50` to override the AI-detected amount.
+- **Amount Confidence Indicator** — When OCR detects multiple amounts in a screenshot, a warning is shown so the user can verify.
+- **Auto-Categorization Rules** — Save rules (merchant pattern → category) so future similar screenshots are matched instantly without calling AI. Rules are stored locally in `ocr-rules.json`.
+- **`/rules` Command** — List and delete saved rules via inline keyboard.
+- New files: `src/ocr.ts` (OCR + AI pipeline), `src/rules.ts` (rules store).
+- New test files: `test/ocr.test.ts` (17 tests), `test/rules.test.ts` (13 tests).
+- New env vars: `AI_PROVIDER`, `OLLAMA_URL`, `OLLAMA_MODEL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OCR_LANGUAGE`, `OCR_CACHE_DIR`.
+
+### Changed
+
+- `src/config.ts` — `AppConfig` extended with OCR/AI fields (all optional, feature disabled when `AI_PROVIDER` unset).
+- `src/index.ts` — Added photo handler, OCR confirmation callbacks, `/rules` command, OCR edit mode in text handler.
+- `package.json` — Added `tesseract.js` dependency.
+
 ## [1.3.1] - 2026-07-18
 
 ### Changed

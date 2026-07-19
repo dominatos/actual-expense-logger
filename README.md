@@ -1,6 +1,6 @@
 # Actual Budget Telegram Bot
 
-> **Status:** v1.3.1 — Tested with 66 unit tests and Docker deployment.
+> **Status:** v1.4.0 — Tested with 135 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
@@ -17,6 +17,10 @@ This bot allows you to quickly log expenses into Actual Budget directly from Tel
 - **Docker Secrets:** Sensitive credentials can be injected via Docker secrets instead of `.env` files.
 - **Encrypted Budgets:** Supports Actual Budget file encryption via `ACTUAL_FILE_PASSWORD`.
 - **Graceful Shutdown:** SIGINT/SIGTERM handlers ensure sync + shutdown always run (try/finally).
+- **OCR + AI Screenshot Processing:** Send a payment screenshot and the bot extracts the amount via OCR, then uses AI to match it to an existing category. Confirm before saving.
+- **Caption Override:** Send a screenshot with a caption like `15.50` to override the AI-detected amount.
+- **Auto-Categorization Rules:** Save rules (merchant pattern → category) so future screenshots are matched instantly without AI.
+- **`/rules` Command:** List and delete saved rules.
 
 ## Prerequisites
 - Node.js (v22+) if running locally.
@@ -54,6 +58,13 @@ ALLOWED_TELEGRAM_USER_IDS=
 | `ACTUAL_FILE_PASSWORD` | No | Password for encrypted budget files |
 | `ACTUAL_PAYEE_NAME` | No (default `Telegram Bot`) | Payee name on created transactions |
 | `ALLOWED_TELEGRAM_USER_IDS` | Yes | Comma-separated Telegram user IDs to allow (bot blocks all if empty) |
+| `AI_PROVIDER` | No | `ollama` or `openai` — enables screenshot processing when set |
+| `OLLAMA_URL` | No (default `http://host.docker.internal:11434/api/generate`) | Ollama API endpoint |
+| `OLLAMA_MODEL` | No (default `qwen3:8b`) | Ollama model name |
+| `OPENAI_API_KEY` | No | OpenAI API key (required when `AI_PROVIDER=openai`) |
+| `OPENAI_MODEL` | No (default `gpt-4o`) | OpenAI model name |
+| `OCR_LANGUAGE` | No (default `eng`) | Tesseract OCR language |
+| `OCR_CACHE_DIR` | No (default `<ACTUAL_DATA_DIR>/ocr-cache`) | OCR traineddata cache directory |
 
 ## Docker Secrets (Production)
 
