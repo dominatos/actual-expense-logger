@@ -32,6 +32,12 @@ const bot = new Telegraf<BotContext>(config.telegramBotToken);
 // In-memory session for FSM state (amount -> [account ->] category selection)
 bot.use(session());
 
+/**
+ * Creates middleware that restricts bot access to approved Telegram users.
+ *
+ * @param allowedUserIds - Telegram user IDs permitted to continue processing.
+ * @returns Middleware that continues for approved users; when the list is empty, replies with a configuration warning and blocks processing.
+ */
 export function createAccessControlMiddleware(allowedUserIds: number[]) {
   if (allowedUserIds.length === 0) {
     console.warn("WARNING: Bot started without ALLOWED_TELEGRAM_USER_IDS set! It is a bad idea to run without setting this parameter.");
@@ -239,7 +245,9 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
   }
 });
 
-// --- Startup ---
+/**
+ * Initializes the Actual API, starts the Telegram bot, and handles graceful shutdown signals.
+ */
 
 async function start(): Promise<void> {
   try {
