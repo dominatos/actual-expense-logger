@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-07-20
+
+### Fixed
+
+- **OCR edit buttons always visible** — When AI recognizes a screenshot but fails to match a category, the bot now shows the full OCR suggestion screen (with Edit Amount and Change Category buttons) instead of only a category selection list. This ensures users can always correct the AI-recognized amount.
+- **Block confirm without category** — The Confirm button now validates that a category is selected before saving, preventing empty-category transactions.
+
+### Changed
+
+- `src/index.ts` — Path 2 (amount found, no category) now calls `sendOcrSuggestion` instead of `sendCategorySelection`, providing a consistent editing experience.
+
 ## [1.4.0] - 2026-07-19
 
 ### Added

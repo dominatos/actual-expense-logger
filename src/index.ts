@@ -392,22 +392,25 @@ bot.on('photo', async (ctx) => {
         });
       }
     } else if (finalAmount !== null) {
-      // Amount found but no category match
-      ctx.session.amountInCents = finalAmount;
+      // Amount found but no category match — show full OCR suggestion with edit buttons
       ctx.session.ocrPending = {
         amountInCents: finalAmount,
         categoryId: '',
         categoryName: '',
         ocrText: analysis.reasoning,
       };
-      const displayAmount = (Math.abs(finalAmount) / 100).toFixed(2);
 
       if (config.accounts.length === 1) {
         ctx.session.accountId = config.accounts[0].id;
-        await ctx.reply(`Detected amount: ${displayAmount}\nCould not determine category. Please select one:`);
-        await sendCategorySelection(ctx, finalAmount);
+        await sendOcrSuggestion(ctx, {
+          amountInCents: finalAmount,
+          categoryId: null,
+          categoryName: null,
+          confidence: 'low',
+          reasoning: analysis.reasoning,
+        }, ocrText);
       } else {
-        // Multiple accounts: show account selection first
+        // Multiple accounts: show account selection first, then sendOcrSuggestion via acc_ocr_ handler
         const buttons: Array<Array<{ text: string; callback_data: string }>> = [];
         let row: Array<{ text: string; callback_data: string }> = [];
         for (const account of config.accounts) {
@@ -419,7 +422,8 @@ bot.on('photo', async (ctx) => {
         }
         if (row.length > 0) buttons.push(row);
 
-        await ctx.reply(`Detected amount: ${displayAmount}\nCould not determine category.\nPlease select an account:`, {
+        const displayAmount = (Math.abs(finalAmount) / 100).toFixed(2);
+        await ctx.reply(`Amount: ${displayAmount}\nCategory: not detected\nPlease select an account:`, {
           reply_markup: { inline_keyboard: buttons },
         });
       }
@@ -465,6 +469,11 @@ bot.action('ocr_confirm', async (ctx) => {
   }
 
   try {
+    if (!ocrPending.categoryId) {
+      await ctx.answerCbQuery('Please select a category first.', { show_alert: true });
+      return;
+    }
+
     await ctx.answerCbQuery('Saving transaction...');
 
     const accountId = ctx.session?.accountId ?? config.accounts[0]?.id;
