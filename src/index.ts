@@ -361,7 +361,7 @@ bot.on('photo', async (ctx) => {
         amountInCents: finalAmount,
         categoryId: analysis.categoryId,
         categoryName: analysis.categoryName ?? '',
-        ocrText: analysis.reasoning,
+        ocrText: ocrText,
       };
       console.log(`[OCR] Stored ocrPending: categoryId=${analysis.categoryId}, categoryName=${analysis.categoryName}`);
 
@@ -392,7 +392,7 @@ bot.on('photo', async (ctx) => {
         amountInCents: finalAmount,
         categoryId: '',
         categoryName: '',
-        ocrText: analysis.reasoning,
+        ocrText: ocrText,
       };
 
       if (config.accounts.length === 1) {
