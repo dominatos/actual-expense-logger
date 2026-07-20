@@ -138,7 +138,7 @@ export async function addTransaction(
   createBackup(config.actualDataDir);
 
   // Step 2: Add transaction
-  console.log(`Adding transaction: accountId=${accountId}, category=${categoryId}, amount=${amountInCents}, payee=${payeeName}, date=${date}`);
+  console.log(`Adding transaction: accountId=${accountId}, category=${categoryId}, date=${date}`);
 
   const transIds = await api.addTransactions(accountId, [
     {
