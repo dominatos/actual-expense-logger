@@ -154,7 +154,11 @@ export async function addTransaction(
   if (transIds && transIds.length > 0) {
     const transId = transIds[0];
     console.log(`Updating category for transaction ${transId} to ${categoryId}`);
-    await api.updateTransaction(transId, { category: categoryId });
+    try {
+      await api.updateTransaction(transId, { category: categoryId });
+    } catch (err) {
+      console.error(`Failed to update category for transaction ${transId}:`, err);
+    }
   }
 
   // Step 3: Sync to server immediately
