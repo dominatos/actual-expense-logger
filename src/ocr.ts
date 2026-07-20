@@ -195,10 +195,12 @@ export async function processScreenshot(
   let tmpPath: string | null = null;
 
   try {
-    let text = ocrText;
-    if (!text) {
+    let text: string;
+    if (ocrText === undefined) {
       tmpPath = await downloadTelegramPhoto(botToken, fileUrl);
       text = await extractTextFromImage(tmpPath, config.ocrLanguage);
+    } else {
+      text = ocrText;
     }
     console.log(`[OCR] Extracted text (${text.length} chars): ${text.substring(0, 200)}`);
     const categories = await getCategories();
