@@ -22,14 +22,6 @@ interface BotContext extends Context {
   session?: SessionData;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  is_income: boolean;
-  hidden: boolean;
-  group_id: string;
-}
-
 // --- Load config (validates all env vars at startup) ---
 
 const config = loadConfig();
