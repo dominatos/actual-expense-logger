@@ -184,21 +184,26 @@ export function validateCategoryMatch(
 
 /**
  * Full pipeline: download photo -> OCR -> AI analysis -> structured result.
+ * If ocrText is provided, skips download and OCR steps.
  */
 export async function processScreenshot(
   botToken: string,
   fileUrl: string,
+  ocrText?: string,
 ): Promise<OcrAnalysis> {
   const config = loadConfig();
   let tmpPath: string | null = null;
 
   try {
-    tmpPath = await downloadTelegramPhoto(botToken, fileUrl);
-    const ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage);
-    console.log(`[OCR] Extracted text (${ocrText.length} chars): ${ocrText.substring(0, 200)}`);
+    let text = ocrText;
+    if (!text) {
+      tmpPath = await downloadTelegramPhoto(botToken, fileUrl);
+      text = await extractTextFromImage(tmpPath, config.ocrLanguage);
+    }
+    console.log(`[OCR] Extracted text (${text.length} chars): ${text.substring(0, 200)}`);
     const categories = await getCategories();
     console.log(`[OCR] Available categories: ${categories.map((c) => `${c.id}=${c.name}`).join(', ')}`);
-    const prompt = buildAnalysisPrompt(ocrText, categories);
+    const prompt = buildAnalysisPrompt(text, categories);
     const rawResponse = await callAiProvider(prompt);
     console.log(`[OCR] Raw AI response: ${rawResponse.substring(0, 500)}`);
     const result = parseAiResponse(rawResponse);

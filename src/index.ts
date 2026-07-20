@@ -347,7 +347,7 @@ bot.on('photo', async (ctx) => {
     } else {
       // No rule: full AI pipeline
       console.log('[OCR] No rule matched, running full AI pipeline');
-      analysis = await processScreenshot(config.telegramBotToken, fileUrl);
+      analysis = await processScreenshot(config.telegramBotToken, fileUrl, ocrText);
       console.log(`[OCR] AI result: categoryId=${analysis.categoryId}, categoryName=${analysis.categoryName}, amount=${analysis.amountInCents}`);
     }
 
