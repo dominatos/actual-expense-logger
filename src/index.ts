@@ -1,8 +1,9 @@
 import { Telegraf, session, Context } from 'telegraf';
 import { loadConfig } from './config';
 import { initActual, getCategories, getAccounts, addTransaction, finalize } from './actual';
-import { processScreenshot, countAmountsInOcr, type OcrAnalysis } from './ocr';
+import { processScreenshot, countAmountsInOcr, extractTextFromImage, downloadTelegramPhoto, buildAnalysisPrompt, callAiProvider, parseAiResponse, type OcrAnalysis } from './ocr';
 import { loadRules, saveRule, deleteRule, matchRule, type Rule } from './rules';
+import { unlink } from 'node:fs/promises';
 
 // --- Types ---
 
@@ -304,18 +305,14 @@ bot.on('photo', async (ctx) => {
 
     // Check local rules first (before AI)
     // We need OCR text for rule matching, so run OCR first
-    const { extractTextFromImage } = await import('./ocr.js');
-    const { loadConfig: getOcrConfig } = await import('./config.js');
-    const ocrConfig = getOcrConfig();
+    const ocrConfig = loadConfig();
 
     // Download and OCR the image
-    const { downloadTelegramPhoto } = await import('./ocr.js');
     const tmpPath = await downloadTelegramPhoto(config.telegramBotToken, fileUrl);
     let ocrText = '';
     try {
       ocrText = await extractTextFromImage(tmpPath, ocrConfig.ocrLanguage);
     } finally {
-      const { unlink } = await import('node:fs/promises');
       await unlink(tmpPath).catch(() => {});
     }
 
@@ -337,7 +334,6 @@ bot.on('photo', async (ctx) => {
     } else if (matchedRule) {
       // Rule matched, no caption: use OCR for amount, rule for category
       console.log(`[OCR] Rule matched: ${matchedRule.pattern} -> ${matchedRule.categoryName} (${matchedRule.categoryId})`);
-      const { buildAnalysisPrompt, callAiProvider, parseAiResponse } = await import('./ocr.js');
       const categories = await getCategories();
       const prompt = buildAnalysisPrompt(ocrText, categories);
       const rawResponse = await callAiProvider(prompt);

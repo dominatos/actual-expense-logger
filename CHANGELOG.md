@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.5] - 2026-07-20
+
+### Changed
+
+- **Static imports in photo handler** — Replaced 5 dynamic `import()` calls with static top-level imports for `extractTextFromImage`, `downloadTelegramPhoto`, `buildAnalysisPrompt`, `callAiProvider`, `parseAiResponse`, and `unlink`. Improves code readability and eliminates per-screenshot import overhead.
+
 ## [1.4.4] - 2026-07-20
 
 ### Fixed
