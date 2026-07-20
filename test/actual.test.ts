@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
   downloadBudget: vi.fn().mockResolvedValue(undefined),
   sync: vi.fn().mockResolvedValue(undefined),
   shutdown: vi.fn().mockResolvedValue(undefined),
-  addTransactions: vi.fn().mockResolvedValue('ok'),
+  addTransactions: vi.fn().mockResolvedValue(['trans-1']),
+  updateTransaction: vi.fn().mockResolvedValue(undefined),
   getCategories: vi.fn().mockResolvedValue([]),
   getAccounts: vi.fn().mockResolvedValue([]),
   loadConfig: vi.fn().mockReturnValue({
@@ -31,6 +32,7 @@ vi.mock('@actual-app/api', () => ({
     sync: mocks.sync,
     shutdown: mocks.shutdown,
     addTransactions: mocks.addTransactions,
+    updateTransaction: mocks.updateTransaction,
     getCategories: mocks.getCategories,
     getAccounts: mocks.getAccounts,
   },

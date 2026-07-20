@@ -16,6 +16,8 @@ services:
       - telegram_bot_token
       - actual_password
       - actual_file_password
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   actual_bot_data:

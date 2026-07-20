@@ -82,6 +82,14 @@ export interface AppConfig {
   actualFilePassword: string | undefined;
   actualPayeeName: string;
   allowedUserIds: number[];
+  // OCR + AI screenshot processing (optional — feature disabled when aiProvider is undefined)
+  aiProvider: 'ollama' | 'openai' | undefined;
+  ollamaUrl: string;
+  ollamaModel: string;
+  openaiApiKey: string | undefined;
+  openaiModel: string;
+  ocrLanguage: string;
+  ocrCacheDir: string;
 }
 
 let _config: AppConfig | null = null;
@@ -115,6 +123,19 @@ export function loadConfig(): AppConfig {
     readSecret('ALLOWED_TELEGRAM_USER_IDS') || process.env.ALLOWED_TELEGRAM_USER_IDS || ''
   );
 
+  // OCR + AI configuration (optional)
+  const aiProviderRaw = optional('AI_PROVIDER', '').toLowerCase();
+  const aiProvider: 'ollama' | 'openai' | undefined =
+    aiProviderRaw === 'ollama' ? 'ollama' :
+    aiProviderRaw === 'openai' ? 'openai' :
+    undefined;
+  const ollamaUrl = optional('OLLAMA_URL', 'http://host.docker.internal:11434/api/generate');
+  const ollamaModel = optional('OLLAMA_MODEL', 'qwen3:8b');
+  const openaiApiKey = readSecret('OPENAI_API_KEY') || undefined;
+  const openaiModel = optional('OPENAI_MODEL', 'gpt-4o');
+  const ocrLanguage = optional('OCR_LANGUAGE', 'eng');
+  const ocrCacheDir = optional('OCR_CACHE_DIR', `${actualDataDir}/ocr-cache`);
+
   _config = {
     telegramBotToken,
     actualServerUrl,
@@ -125,6 +146,13 @@ export function loadConfig(): AppConfig {
     actualFilePassword,
     actualPayeeName,
     allowedUserIds,
+    aiProvider,
+    ollamaUrl,
+    ollamaModel,
+    openaiApiKey,
+    openaiModel,
+    ocrLanguage,
+    ocrCacheDir,
   };
 
   return _config;

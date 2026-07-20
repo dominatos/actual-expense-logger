@@ -5,6 +5,90 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.10] - 2026-07-20
+
+### Fixed
+
+- **Preserve empty OCR text from re-download** — Changed `processScreenshot` to check `ocrText === undefined` instead of `!text`, so an explicitly provided empty string (no text detected) is preserved without triggering a redundant image download and OCR pass.
+
+## [1.4.9] - 2026-07-20
+
+### Changed
+
+- **Remove tautological OCR config tests** — Removed 6 tests that duplicated `optional()` logic in assertions instead of testing `loadConfig()` behavior. Test count: 140 → 134.
+
+## [1.4.8] - 2026-07-20
+
+### Changed
+
+- **Remove duplicate Category interface** — Removed unused `Category` interface from `src/index.ts`. The canonical definition lives in `src/ocr.ts`.
+
+## [1.4.7] - 2026-07-20
+
+### Fixed
+
+- **Store OCR text, not AI reasoning, in ocrPending** — Both `ocrPending` assignments now store the actual OCR-extracted text instead of `analysis.reasoning`. Fixes rule creation (which matches against OCR text) and the OCR preview shown to users.
+
+## [1.4.6] - 2026-07-20
+
+### Fixed
+
+- **Eliminate double OCR processing** — `processScreenshot` now accepts an optional `ocrText` parameter. The photo handler passes the already-extracted text in the no-rule branch, avoiding a redundant download and OCR pass.
+
+## [1.4.5] - 2026-07-20
+
+### Changed
+
+- **Static imports in photo handler** — Replaced 5 dynamic `import()` calls with static top-level imports for `extractTextFromImage`, `downloadTelegramPhoto`, `buildAnalysisPrompt`, `callAiProvider`, `parseAiResponse`, and `unlink`. Improves code readability and eliminates per-screenshot import overhead.
+
+## [1.4.4] - 2026-07-20
+
+### Fixed
+
+- **Prevent Markdown parsing errors in OCR suggestions** — Removed `parse_mode: 'Markdown'` from OCR suggestion replies to prevent crashes when receipt text contains Markdown-special characters (`_`, `*`, `` ` ``, `[`).
+
+## [1.4.3] - 2026-07-20
+
+### Fixed
+
+- **Prevent duplicate transactions on category update failure** — Wrapped `api.updateTransaction` in try/catch so a category update failure after a successful `addTransactions` does not reject the save and trigger a retry.
+
+## [1.4.2] - 2026-07-20
+
+### Fixed
+
+- **Redacted sensitive data from transaction logs** — Removed `payeeName` and `amountInCents` from console output to prevent leaking personal financial data in logs.
+
+## [1.4.1] - 2026-07-20
+
+### Fixed
+
+- **OCR edit buttons always visible** — When AI recognizes a screenshot but fails to match a category, the bot now shows the full OCR suggestion screen (with Edit Amount and Change Category buttons) instead of only a category selection list. This ensures users can always correct the AI-recognized amount.
+- **Block confirm without category** — The Confirm button now validates that a category is selected before saving, preventing empty-category transactions.
+
+### Changed
+
+- `src/index.ts` — Path 2 (amount found, no category) now calls `sendOcrSuggestion` instead of `sendCategorySelection`, providing a consistent editing experience.
+
+## [1.4.0] - 2026-07-19
+
+### Added
+
+- **OCR + AI Screenshot Processing** — Send a payment screenshot to the bot and it will extract the amount using OCR (tesseract.js), then use AI (Ollama or OpenAI) to match it to an existing Actual Budget category. User confirms before saving.
+- **Caption Override** — Send a screenshot with a caption like `15.50` to override the AI-detected amount.
+- **Amount Confidence Indicator** — When OCR detects multiple amounts in a screenshot, a warning is shown so the user can verify.
+- **Auto-Categorization Rules** — Save rules (merchant pattern → category) so future similar screenshots are matched instantly without calling AI. Rules are stored locally in `ocr-rules.json`.
+- **`/rules` Command** — List and delete saved rules via inline keyboard.
+- New files: `src/ocr.ts` (OCR + AI pipeline), `src/rules.ts` (rules store).
+- New test files: `test/ocr.test.ts` (17 tests), `test/rules.test.ts` (13 tests).
+- New env vars: `AI_PROVIDER`, `OLLAMA_URL`, `OLLAMA_MODEL`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OCR_LANGUAGE`, `OCR_CACHE_DIR`.
+
+### Changed
+
+- `src/config.ts` — `AppConfig` extended with OCR/AI fields (all optional, feature disabled when `AI_PROVIDER` unset).
+- `src/index.ts` — Added photo handler, OCR confirmation callbacks, `/rules` command, OCR edit mode in text handler.
+- `package.json` — Added `tesseract.js` dependency.
+
 ## [1.3.1] - 2026-07-18
 
 ### Changed
