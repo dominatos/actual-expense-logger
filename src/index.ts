@@ -278,7 +278,6 @@ async function sendOcrSuggestion(ctx: BotContext, analysis: OcrAnalysis, ocrText
   ];
 
   await ctx.reply(lines.filter(Boolean).join('\n'), {
-    parse_mode: 'Markdown',
     reply_markup: { inline_keyboard: buttons },
   });
 }
