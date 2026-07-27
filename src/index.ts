@@ -199,7 +199,7 @@ bot.on('text', async (ctx) => {
 const pendingTransactions = new Set<string>();
 
 // Step 2: Account selection (only when multiple accounts are configured)
-bot.action(/^acc_(.+)$/, async (ctx) => {
+bot.action(/^acc_(?!ocr_)(.+)$/, async (ctx) => {
   try {
     const accountId = ctx.match[1];
     const amountInCents = ctx.session?.amountInCents;

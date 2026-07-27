@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.11] - 2026-07-27
+
+### Fixed
+
+- **Multi-account OCR routing bug** — The regex `/^acc_(.+)$/` in the manual-amount account handler was greedily matching `acc_ocr_*` callbacks from the OCR flow, routing them to the wrong handler. This caused "Session expired" errors and prevented edit buttons from appearing after account selection. Fixed by adding a negative lookahead `(?!ocr_)` to the regex pattern.
+
 ## [1.4.10] - 2026-07-20
 
 ### Fixed
