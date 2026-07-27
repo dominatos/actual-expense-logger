@@ -115,6 +115,17 @@ describe('parseAiResponse', () => {
     expect(result.amountInCents).toBe(-9995);
   });
 
+  it('rejects negative amounts', () => {
+    const raw = JSON.stringify({
+      amount: -15.99,
+      categoryId: 'cat-1',
+      categoryName: 'Food',
+      confidence: 'high'
+    });
+    const result = parseAiResponse(raw);
+    expect(result.amountInCents).toBeNull();
+  });
+
   it('throws on completely invalid JSON', () => {
     expect(() => parseAiResponse('not json at all')).toThrow();
   });
@@ -134,8 +145,12 @@ describe('countAmountsInOcr', () => {
   });
 
   it('counts amounts with comma separator', () => {
-    // "1.234,56" matches "1.23" and "4,56" — two price-like patterns
-    expect(countAmountsInOcr('1.234,56')).toBe(2);
+    expect(countAmountsInOcr('1.234,56')).toBe(1);
+    expect(countAmountsInOcr('1,234.56')).toBe(1);
+  });
+
+  it('counts amounts with single decimal', () => {
+    expect(countAmountsInOcr('15,5')).toBe(1);
   });
 
   it('does not count plain integers', () => {
@@ -181,6 +196,19 @@ describe('validateCategoryMatch', () => {
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBeNull();
     expect(validated.categoryName).toBeNull();
+  });
+
+  it('fixes orphaned categoryId by looking up the ID to populate categoryName', () => {
+    const result: OcrAnalysis = {
+      amountInCents: -464,
+      categoryId: 'cat-2',
+      categoryName: null, // orphaned ID
+      confidence: 'high',
+      reasoning: 'Test',
+    };
+    const validated = validateCategoryMatch(result, mockCategories);
+    expect(validated.categoryId).toBe('cat-2');
+    expect(validated.categoryName).toBe('Subscriptions');
   });
 
   it('handles case-insensitive category name match', () => {

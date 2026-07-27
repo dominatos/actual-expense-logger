@@ -1,0 +1,15 @@
+--- CHANGELOG.md
++++ CHANGELOG.md
+@@ -5,6 +5,16 @@
+ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+ 
++## [1.4.12] - 2026-07-27
++
++### Fixed
++
++- **OCR robustness and bug fixes** — Addressed several issues in the OCR processing pipeline: rejected negative OCR amounts before conversion, fixed early return in category validation to ensure orphaned IDs are always resolved, added AbortController timeouts to all remote fetch calls (photo download and AI APIs) to prevent hanging requests, updated amount counting regex to handle locale-aware formats (like `1.234,56` and `15,5`), and threaded the `ocrCacheDir` config option through to Tesseract's `createWorker` cachePath option to properly honor overrides.
++
+ ## [1.4.11] - 2026-07-27
+ 
+ ### Fixed
