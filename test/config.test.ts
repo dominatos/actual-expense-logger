@@ -4,7 +4,7 @@ import { readSecret, requireSecret, optional, parseAccounts } from '../src/confi
 import { parseUserIds } from '../src/utils';
 
 // We test readSecret/requireSecret/optional directly since they're now exported.
-// loadConfig() is tested via integration (it reads real env vars).
+// loadConfig() is directly covered by this unit suite, including its dynamic-import and module-reset setup.
 
 vi.mock('dotenv', () => ({
   config: vi.fn(),
@@ -186,6 +186,20 @@ describe('loadConfig', () => {
     expect(config.actualPayeeName).toBe('Telegram Bot');
     expect(config.allowedUserIds).toEqual([]);
     expect(config.aiProvider).toBeUndefined();
+  });
+
+  it('loads custom ACTUAL_DATA_DIR and derives ocrCacheDir from it', () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    process.env['ACTUAL_DATA_DIR'] = '/custom/data/path';
+    
+    const config = loadConfig();
+    
+    expect(config.actualDataDir).toBe('/custom/data/path');
+    expect(config.ocrCacheDir).toBe('/custom/data/path/ocr-cache');
   });
 
   it('loads valid configuration with multiple accounts', async () => {
