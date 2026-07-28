@@ -155,9 +155,13 @@ describe('parseAccounts', () => {
 describe('loadConfig', () => {
   const originalEnv = { ...process.env };
 
-  beforeEach(() => {
+  let loadConfig: typeof import('../src/config').loadConfig;
+
+  beforeEach(async () => {
     process.env = { ...originalEnv };
     vi.resetModules();
+    const configModule = await import('../src/config');
+    loadConfig = configModule.loadConfig;
   });
 
   afterEach(() => {
@@ -171,11 +175,7 @@ describe('loadConfig', () => {
     process.env['ACTUAL_SYNC_ID'] = 'sync-id';
     process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
     
-    // Clear the internal cache in config.ts by resetting _config
-    const configModule = await import('../src/config');
-    // @ts-ignore
-    configModule._config = null;
-    const config = configModule.loadConfig();
+    const config = loadConfig();
     
     expect(config.telegramBotToken).toBe('bot-token');
     expect(config.actualServerUrl).toBe('http://actual');
@@ -195,10 +195,7 @@ describe('loadConfig', () => {
     process.env['ACTUAL_SYNC_ID'] = 'sync-id';
     process.env['ACTUAL_ACCOUNTS'] = 'Cash:uuid-1,Bank:uuid-2';
     
-    const configModule = await import('../src/config');
-    // @ts-ignore
-    configModule._config = null;
-    const config = configModule.loadConfig();
+    const config = loadConfig();
     
     expect(config.accounts).toEqual([
       { name: 'Cash', id: 'uuid-1' },
@@ -208,10 +205,7 @@ describe('loadConfig', () => {
 
   it('throws if required variables are missing', async () => {
     delete process.env['TELEGRAM_BOT_TOKEN'];
-    const configModule = await import('../src/config');
-    // @ts-ignore
-    configModule._config = null;
-    expect(() => configModule.loadConfig()).toThrow(/Missing required environment variable/);
+    expect(() => loadConfig()).toThrow(/Missing required environment variable/);
   });
 
   it('throws if ACTUAL_ACCOUNTS is invalid', async () => {
@@ -221,10 +215,7 @@ describe('loadConfig', () => {
     process.env['ACTUAL_SYNC_ID'] = 'sync-id';
     process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
     process.env['ACTUAL_ACCOUNTS'] = ', ,';
-    const configModule = await import('../src/config');
-    // @ts-ignore
-    configModule._config = null;
-    expect(() => configModule.loadConfig()).toThrow(/contains no valid "name:uuid" entries/);
+    expect(() => loadConfig()).toThrow(/contains no valid "name:uuid" entries/);
   });
 
   it('loads OCR + AI configuration when aiProvider is set', async () => {
@@ -236,10 +227,7 @@ describe('loadConfig', () => {
     process.env['AI_PROVIDER'] = 'ollama';
     process.env['OLLAMA_MODEL'] = 'test-model';
     
-    const configModule = await import('../src/config');
-    // @ts-ignore
-    configModule._config = null;
-    const config = configModule.loadConfig();
+    const config = loadConfig();
     
     expect(config.aiProvider).toBe('ollama');
     expect(config.ollamaModel).toBe('test-model');

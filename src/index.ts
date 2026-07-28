@@ -311,7 +311,7 @@ bot.on('photo', async (ctx) => {
     const tmpPath = await downloadTelegramPhoto(config.telegramBotToken, fileUrl);
     let ocrText = '';
     try {
-      ocrText = await extractTextFromImage(tmpPath, ocrConfig.ocrLanguage);
+      ocrText = await extractTextFromImage(tmpPath, ocrConfig.ocrLanguage, ocrConfig.ocrCacheDir);
     } finally {
       await unlink(tmpPath).catch(() => {});
     }
