@@ -56,7 +56,15 @@ export function createAccessControlMiddleware(allowedUserIds: number[]) {
     if (ctx.from && allowedUserIds.includes(ctx.from.id)) {
       return next();
     }
-    // Silently ignore unauthorized users
+    
+    // Reply to unauthorized users only if there is a clear user context
+    if (ctx.from) {
+      try {
+        await ctx.reply("You are not authorized to use this bot. If you are the owner, please go to @RawDataBot to get your ID and add it to ALLOWED_TELEGRAM_USER_IDS in your .env file.");
+      } catch (e) {
+        console.error("Failed to send unauthorized message:", e);
+      }
+    }
   };
 }
 

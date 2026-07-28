@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.14] - 2026-07-28
+
+### Added
+
+- **Unauthorized User Reply** — The bot now explicitly replies with a "You are not authorized to use this bot" message to unauthorized users instead of silently ignoring them, providing clearer feedback.
+
 ## [1.4.13] - 2026-07-28
 
 ### Fixed
