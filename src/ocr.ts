@@ -57,6 +57,9 @@ export async function extractTextFromImage(
   cacheDir?: string
 ): Promise<string> {
   const { createWorker } = await import('tesseract.js');
+  if (cacheDir && !existsSync(cacheDir)) {
+    await mkdir(cacheDir, { recursive: true });
+  }
   const workerOptions = cacheDir ? { cachePath: cacheDir } : {};
   const worker = await createWorker(language, undefined, workerOptions);
   try {
@@ -300,6 +303,7 @@ async function callOpenAi(apiKey: string, model: string, prompt: string, timeout
           { role: 'user', content: prompt },
         ],
         temperature: 0.1,
+        response_format: { type: 'json_object' },
       }),
       signal: controller.signal,
     });

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.13] - 2026-07-28
+
+### Fixed
+
+- **OpenAI JSON output format** — Added `response_format: { type: 'json_object' }` to the OpenAI API request body in `callOpenAi` to guarantee valid JSON output and reduce parsing errors.
+
+### Changed
+
+- **Config cleanup** — Removed duplicate `parseUserIds` function from `src/config.ts` (now correctly imported from `src/utils.ts`).
+- **Config tests** — Added comprehensive unit tests for `loadConfig` in `test/config.test.ts` to verify configuration loading logic, account fallbacks, and feature toggles.
+- **Workspace cleanup** — Deleted redundant artifact patch files (`update_changelog.patch`, `update_tests.patch`).
+
 ## [1.4.12] - 2026-07-27
 
 ### Fixed
