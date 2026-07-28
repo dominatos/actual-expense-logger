@@ -155,10 +155,36 @@ describe('parseAccounts', () => {
 describe('loadConfig', () => {
   const originalEnv = { ...process.env };
 
+  // All env keys that loadConfig() reads, plus their _FILE variants for Docker secrets.
+  const CONFIG_KEYS = [
+    'TELEGRAM_BOT_TOKEN',
+    'ACTUAL_SERVER_URL',
+    'ACTUAL_PASSWORD',
+    'ACTUAL_SYNC_ID',
+    'ACTUAL_ACCOUNTS',
+    'ACTUAL_DEFAULT_ACCOUNT_ID',
+    'ACTUAL_DATA_DIR',
+    'ACTUAL_FILE_PASSWORD',
+    'ACTUAL_PAYEE_NAME',
+    'ALLOWED_TELEGRAM_USER_IDS',
+    'AI_PROVIDER',
+    'OLLAMA_URL',
+    'OLLAMA_MODEL',
+    'OPENAI_API_KEY',
+    'OPENAI_MODEL',
+    'OCR_LANGUAGE',
+    'OCR_CACHE_DIR',
+  ];
+
   let loadConfig: typeof import('../src/config').loadConfig;
 
   beforeEach(async () => {
     process.env = { ...originalEnv };
+    // Remove all config-relevant keys so tests start from a clean state
+    for (const key of CONFIG_KEYS) {
+      delete process.env[key];
+      delete process.env[`${key}_FILE`];
+    }
     vi.resetModules();
     const configModule = await import('../src/config');
     loadConfig = configModule.loadConfig;
