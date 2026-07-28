@@ -43,9 +43,9 @@ export async function finalize(): Promise<void> {
 }
 
 /**
- * Create a backup of the local budget database before writing.
- * Copies SQLite files from the data directory to a timestamped backup folder.
- * Keeps only the last 5 backups to avoid disk bloat.
+ * Creates a timestamped backup of SQLite database files in the data directory and retains the five newest backups.
+ *
+ * @param dataDir - The directory containing the local budget database files.
  */
 function createBackup(dataDir: string): void {
   const backupDir = join(dataDir, 'backups');
@@ -121,8 +121,10 @@ export async function getAccounts(): Promise<Array<{ id: string; name: string }>
 }
 
 /**
- * Add a transaction with pre-write backup and post-write sync.
- * Safety lifecycle: backup -> addTransaction -> sync
+ * Adds a transaction, creates a pre-write backup, and synchronizes the changes.
+ *
+ * @param amountInCents - The transaction amount in cents
+ * @param payeeName - The transaction payee
  */
 export async function addTransaction(
   accountId: string,

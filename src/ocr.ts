@@ -25,7 +25,12 @@ export interface OcrAnalysis {
 // --- Functions ---
 
 /**
- * Download a Telegram photo to a temporary file and return the path.
+ * Downloads an image to a uniquely named temporary JPEG file.
+ *
+ * @param fileUrl - URL of the image to download
+ * @param timeoutMs - Maximum time allowed for the download in milliseconds
+ * @returns The path to the downloaded temporary file
+ * @throws Error if the download response is unsuccessful
  */
 export async function downloadTelegramPhoto(
   botToken: string,
@@ -49,7 +54,12 @@ export async function downloadTelegramPhoto(
 }
 
 /**
- * Extract text from an image using tesseract.js.
+ * Extracts and normalizes text recognized from an image.
+ *
+ * @param imagePath - Path to the image to process
+ * @param language - OCR language code
+ * @param cacheDir - Optional directory for OCR language data and cache files
+ * @returns The recognized text with trimmed, non-empty lines joined by newline characters
  */
 export async function extractTextFromImage(
   imagePath: string,
@@ -75,8 +85,9 @@ export async function extractTextFromImage(
 }
 
 /**
- * Count how many price-like amounts appear in OCR text.
- * Used for confidence indicator (multiple amounts = potential ambiguity).
+ * Counts price-like monetary amounts in OCR text.
+ *
+ * @returns The number of detected amounts.
  */
 export function countAmountsInOcr(ocrText: string): number {
   // Match locale-aware monetary amounts:
@@ -88,7 +99,11 @@ export function countAmountsInOcr(ocrText: string): number {
 }
 
 /**
- * Build the AI prompt that includes OCR text and Actual Budget categories.
+ * Builds a prompt for extracting a transaction amount and matching it to an available budget category.
+ *
+ * @param ocrText - Text extracted from the transaction screenshot.
+ * @param categories - Budget categories available for matching.
+ * @returns A prompt requiring a JSON object containing the extracted amount, category match, confidence, and reasoning.
  */
 export function buildAnalysisPrompt(ocrText: string, categories: Category[]): string {
   const categoryList = categories
@@ -127,7 +142,10 @@ CRITICAL RULES:
 }
 
 /**
- * Call the configured AI provider to analyze OCR text + categories.
+ * Sends an analysis prompt to the configured AI provider.
+ *
+ * @param prompt - The OCR analysis prompt to submit
+ * @returns The provider's response text
  */
 export async function callAiProvider(prompt: string): Promise<string> {
   const config = loadConfig();
@@ -147,8 +165,10 @@ export async function callAiProvider(prompt: string): Promise<string> {
 }
 
 /**
- * Parse the AI response JSON string into an OcrAnalysis object.
- * Handles cases where the AI wraps JSON in markdown code blocks.
+ * Parses an AI response into a normalized OCR analysis result.
+ *
+ * @param raw - The AI response, optionally wrapped in a Markdown JSON code block
+ * @returns The normalized analysis with validated category fields, confidence, reasoning, and expense amount in cents
  */
 export function parseAiResponse(raw: string): OcrAnalysis {
   let cleaned = raw.trim();
@@ -174,8 +194,11 @@ export function parseAiResponse(raw: string): OcrAnalysis {
 }
 
 /**
- * Validate and fix AI result: ensure categoryId matches categoryName.
- * If the AI returned a mismatched pair, look up the correct categoryId by name.
+ * Validates and reconciles the category identifiers and names in an OCR analysis result.
+ *
+ * @param result - The OCR analysis result to validate
+ * @param categories - The available budget categories
+ * @returns The result with canonical category details, or cleared category fields and low confidence when no category can be resolved
  */
 export function validateCategoryMatch(
   result: OcrAnalysis,
@@ -226,8 +249,11 @@ export function validateCategoryMatch(
 }
 
 /**
- * Full pipeline: download photo -> OCR -> AI analysis -> structured result.
- * If ocrText is provided, skips download and OCR steps.
+ * Analyzes a Telegram receipt image and produces a categorized budget result.
+ *
+ * @param fileUrl - The Telegram file URL for the receipt image
+ * @param ocrText - Optional pre-extracted text; when provided, image download and OCR are skipped
+ * @returns The extracted amount, matched category, confidence, and reasoning
  */
 export async function processScreenshot(
   botToken: string,
@@ -261,7 +287,14 @@ export async function processScreenshot(
   }
 }
 
-// --- Private helpers ---
+/**
+ * Sends a prompt to an Ollama-compatible endpoint and retrieves its generated text.
+ *
+ * @param url - The Ollama endpoint URL
+ * @param model - The model to use for generation
+ * @param prompt - The prompt to send
+ * @returns The generated response text
+ */
 
 async function callOllama(url: string, model: string, prompt: string, timeoutMs: number = 120_000): Promise<string> {
   const controller = new AbortController();
@@ -286,6 +319,15 @@ async function callOllama(url: string, model: string, prompt: string, timeoutMs:
   }
 }
 
+/**
+ * Sends a prompt to the OpenAI chat completions API and retrieves its response content.
+ *
+ * @param apiKey - The API key used for authentication
+ * @param model - The OpenAI model to use
+ * @param prompt - The user prompt to submit
+ * @param timeoutMs - The request timeout in milliseconds
+ * @returns The response content, or an empty string when no content is available
+ */
 async function callOpenAi(apiKey: string, model: string, prompt: string, timeoutMs: number = 60_000): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);

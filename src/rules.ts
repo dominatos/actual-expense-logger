@@ -14,6 +14,11 @@ interface RulesFile {
   rules: Rule[];
 }
 
+/**
+ * Resolves the path to the OCR rules storage file.
+ *
+ * @returns The path to `ocr-rules.json` in the configured data directory
+ */
 function getRulesPath(): string {
   const dataDir = process.env.ACTUAL_DATA_DIR || '/app/data';
   return join(dataDir, 'ocr-rules.json');
@@ -50,7 +55,12 @@ function saveRulesToFile(rules: Rule[]): void {
 }
 
 /**
- * Add a new rule. If a rule with the same pattern exists, it is replaced.
+ * Creates a rule for an OCR pattern, replacing any existing rule with the same normalized pattern.
+ *
+ * @param pattern - The OCR pattern to trim and convert to uppercase
+ * @param categoryId - The category identifier associated with the rule
+ * @param categoryName - The category name associated with the rule
+ * @returns The newly created rule
  */
 export function saveRule(pattern: string, categoryId: string, categoryName: string): Rule {
   const rules = loadRules();
@@ -73,7 +83,10 @@ export function saveRule(pattern: string, categoryId: string, categoryName: stri
 }
 
 /**
- * Delete a rule by ID.
+ * Deletes the rule with the specified identifier.
+ *
+ * @param id - The identifier of the rule to delete
+ * @returns `true` if a rule was deleted, `false` if no matching rule was found
  */
 export function deleteRule(id: string): boolean {
   const rules = loadRules();
@@ -84,8 +97,10 @@ export function deleteRule(id: string): boolean {
 }
 
 /**
- * Match OCR text against saved rules (case-insensitive substring).
- * Returns the most recently created match, or null if no match.
+ * Finds the most recently created rule whose pattern appears in the OCR text.
+ *
+ * @param ocrText - The OCR text to evaluate
+ * @returns The most recently created matching rule, or `null` if no rule matches
  */
 export function matchRule(ocrText: string): Rule | null {
   const rules = loadRules();

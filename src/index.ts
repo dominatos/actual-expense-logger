@@ -34,10 +34,10 @@ const bot = new Telegraf<BotContext>(config.telegramBotToken);
 bot.use(session());
 
 /**
- * Creates middleware that restricts bot access to approved Telegram users.
+ * Creates middleware that allows only approved Telegram users to continue processing.
  *
- * @param allowedUserIds - Telegram user IDs permitted to continue processing.
- * @returns Middleware that continues for approved users; when the list is empty, replies with a configuration warning and blocks processing.
+ * @param allowedUserIds - Telegram user IDs permitted to use the bot.
+ * @returns Middleware that continues for approved users and blocks unauthorized users or configurations without approved IDs.
  */
 export function createAccessControlMiddleware(allowedUserIds: number[]) {
   if (allowedUserIds.length === 0) {
@@ -235,7 +235,14 @@ bot.action(/^acc_(?!ocr_)(.+)$/, async (ctx) => {
 
 // --- OCR Screenshot Processing ---
 
-// Helper: show OCR suggestion for confirmation
+/**
+ * Sends an OCR analysis summary with transaction confirmation and editing actions.
+ *
+ * @param ctx - The bot context used to send the suggestion
+ * @param analysis - The OCR-derived amount, category, confidence, and reasoning
+ * @param ocrText - Text extracted from the screenshot
+ * @param amountOverride - Optional amount to display and use instead of the analyzed amount
+ */
 async function sendOcrSuggestion(ctx: BotContext, analysis: OcrAnalysis, ocrText: string, amountOverride?: number): Promise<void> {
   const amountCents = amountOverride ?? analysis.amountInCents;
   const displayAmount = amountCents !== null

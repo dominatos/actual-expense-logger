@@ -31,6 +31,13 @@ export function requireSecret(envKey: string): string {
   return value;
 }
 
+/**
+ * Retrieves an environment variable or uses a fallback value.
+ *
+ * @param envKey - The environment variable name
+ * @param defaultValue - The value to use when the environment variable is unavailable or empty
+ * @returns The configured environment value or `defaultValue`
+ */
 export function optional(envKey: string, defaultValue: string): string {
   return readSecret(envKey) || process.env[envKey] || defaultValue;
 }
@@ -83,6 +90,11 @@ export interface AppConfig {
 
 let _config: AppConfig | null = null;
 
+/**
+ * Loads and caches the application configuration from environment variables and secrets.
+ *
+ * @returns The application configuration
+ */
 export function loadConfig(): AppConfig {
   if (_config) return _config;
 
