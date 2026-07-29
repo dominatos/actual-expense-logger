@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.20] - 2026-07-29
+
+### Fixed
+
+- **OCR Error Handling & Validation** — Updated `parseAiResponse` to gracefully handle syntax errors instead of throwing when the AI returns invalid or truncated JSON. Strengthened category ID normalization for blank strings. Improved AI_PROVIDER config error messaging and tightened empty string validation for creating rules.
+
 ## [1.4.19] - 2026-07-29
 
 ### Fixed

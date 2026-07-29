@@ -28,7 +28,7 @@ function getRulesPath(): string {
  * Loads all rules from the JSON file.
  *
  * @returns The stored rules, or an empty array when the file does not exist.
- * @throws When the file contains invalid JSON or does not have a `rules` array.
+ * @throws When the file contains invalid JSON, does not have a `rules` array, or contains invalid rule entries.
  */
 export function loadRules(): Rule[] {
   const rulesPath = getRulesPath();
@@ -39,15 +39,19 @@ export function loadRules(): Rule[] {
     throw new Error(`Malformed rules file at ${rulesPath}: expected { rules: [...] }`);
   }
   
-  for (const rule of parsed.rules) {
+  for (const item of parsed.rules) {
+    if (!item || typeof item !== 'object') {
+      throw new Error(`Malformed rules file at ${rulesPath}: invalid rule entry`);
+    }
+    const rule = item as Record<string, unknown>;
     if (
-      !rule || 
-      typeof rule !== 'object' || 
-      typeof (rule as any).id !== 'string' || 
-      typeof (rule as any).pattern !== 'string' || 
-      typeof (rule as any).categoryId !== 'string' || 
-      typeof (rule as any).categoryName !== 'string' || 
-      typeof (rule as any).createdAt !== 'string'
+      typeof rule.id !== 'string' || 
+      typeof rule.pattern !== 'string' || 
+      typeof rule.categoryId !== 'string' || 
+      typeof rule.categoryName !== 'string' || 
+      typeof rule.createdAt !== 'string' ||
+      rule.pattern.trim() === '' ||
+      rule.categoryId.trim() === ''
     ) {
       throw new Error(`Malformed rules file at ${rulesPath}: invalid rule entry`);
     }

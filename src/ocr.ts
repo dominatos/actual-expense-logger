@@ -177,7 +177,19 @@ export function parseAiResponse(raw: string): OcrAnalysis {
     cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
   }
 
-  const parsed = JSON.parse(cleaned);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (err) {
+    // Return structured fallback for syntax errors (e.g. empty, truncated, or non-JSON responses)
+    return {
+      amountInCents: null,
+      categoryId: null,
+      categoryName: null,
+      confidence: 'low',
+      reasoning: 'Failed to parse AI response: not a valid object.',
+    };
+  }
 
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {
@@ -221,6 +233,9 @@ export function validateCategoryMatch(
   result: OcrAnalysis,
   categories: Category[]
 ): OcrAnalysis {
+  if (result.categoryId && result.categoryId.trim() === '') {
+    result.categoryId = null;
+  }
   // No categoryId at all — nothing to validate.
   if (!result.categoryId) return result;
 

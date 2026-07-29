@@ -548,7 +548,7 @@ bot.action('ocr_create_rule', async (ctx) => {
 
   await ctx.answerCbQuery();
 
-  if (!ocrPending.categoryId || !ocrPending.categoryName) {
+  if (!ocrPending.categoryId?.trim() || !ocrPending.categoryName?.trim()) {
     await ctx.reply('Cannot create rule: no category selected yet. Please assign a category first.');
     return;
   }

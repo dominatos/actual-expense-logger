@@ -140,7 +140,7 @@ export function loadConfig(): AppConfig {
   } else if (aiProviderRaw === 'openai') {
     aiProvider = 'openai';
   } else {
-    throw new Error(`Invalid AI_PROVIDER value "${process.env.AI_PROVIDER}": must be "ollama", "openai", or unset`);
+    throw new Error(`Invalid AI_PROVIDER value "${aiProviderRaw}": must be "ollama", "openai", or unset`);
   }
   const ollamaUrl = optional('OLLAMA_URL', 'http://host.docker.internal:11434/api/generate');
   const ollamaModel = optional('OLLAMA_MODEL', 'qwen3:8b');

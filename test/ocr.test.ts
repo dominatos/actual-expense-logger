@@ -139,8 +139,12 @@ describe('parseAiResponse', () => {
     expect(result.amountInCents).toBeNull();
   });
 
-  it('throws on completely invalid JSON', () => {
-    expect(() => parseAiResponse('not json at all')).toThrow();
+  it('returns fallback structure on completely invalid JSON', () => {
+    const result = parseAiResponse('not json at all');
+    expect(result.amountInCents).toBeNull();
+    expect(result.categoryId).toBeNull();
+    expect(result.categoryName).toBeNull();
+    expect(result.confidence).toBe('low');
   });
 });
 
