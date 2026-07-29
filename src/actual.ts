@@ -27,8 +27,7 @@ export async function initActual(): Promise<void> {
 }
 
 /**
- * Sync local changes to the server and shut down the API client.
- * Must always be called before exiting the process to avoid data loss.
+ * Synchronizes local changes with the server and shuts down the API client.
  */
 export async function finalize(): Promise<void> {
   console.log('Syncing changes to server...');
@@ -123,6 +122,8 @@ export async function getAccounts(): Promise<Array<{ id: string; name: string }>
 /**
  * Adds a transaction, creates a pre-write backup, and synchronizes the changes.
  *
+ * @param accountId - The account receiving the transaction
+ * @param categoryId - The category assigned to the transaction
  * @param amountInCents - The transaction amount in cents
  * @param payeeName - The transaction payee
  */

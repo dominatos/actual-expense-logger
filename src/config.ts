@@ -23,6 +23,12 @@ export function readSecret(envKey: string): string | undefined {
   return process.env[envKey];
 }
 
+/**
+ * Retrieves a required environment variable or secret.
+ *
+ * @param envKey - The environment variable key to retrieve
+ * @returns The secret value
+ */
 export function requireSecret(envKey: string): string {
   const value = readSecret(envKey);
   if (!value) {
@@ -91,7 +97,7 @@ export interface AppConfig {
 let _config: AppConfig | null = null;
 
 /**
- * Loads and caches the application configuration from environment variables and secrets.
+ * Loads the application configuration from environment variables and secrets, caching the result for subsequent calls.
  *
  * @returns The application configuration
  */

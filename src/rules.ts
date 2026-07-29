@@ -25,9 +25,10 @@ function getRulesPath(): string {
 }
 
 /**
- * Load all rules from the JSON file.
- * Returns an empty array if the file doesn't exist.
- * Throws if the file exists but contains malformed JSON or an invalid shape.
+ * Loads all rules from the JSON file.
+ *
+ * @returns The stored rules, or an empty array when the file does not exist.
+ * @throws When the file contains invalid JSON or does not have a `rules` array.
  */
 export function loadRules(): Rule[] {
   const rulesPath = getRulesPath();
@@ -54,12 +55,13 @@ function saveRulesToFile(rules: Rule[]): void {
 }
 
 /**
- * Creates a rule for an OCR pattern, replacing any existing rule with the same normalized pattern.
+ * Creates a rule for an OCR pattern, replacing any existing rule with the same case-insensitive pattern.
  *
  * @param pattern - The OCR pattern to trim and convert to uppercase
  * @param categoryId - The category identifier associated with the rule
  * @param categoryName - The category name associated with the rule
  * @returns The newly created rule
+ * @throws Error if `pattern` is empty or contains only whitespace
  */
 export function saveRule(pattern: string, categoryId: string, categoryName: string): Rule {
   const rules = loadRules();

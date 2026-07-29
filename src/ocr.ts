@@ -28,7 +28,7 @@ export interface OcrAnalysis {
  * Downloads an image to a uniquely named temporary JPEG file.
  *
  * @param fileUrl - URL of the image to download
- * @param timeoutMs - Maximum time allowed for the download in milliseconds
+ * @param timeoutMs - Maximum download duration in milliseconds
  * @returns The path to the downloaded temporary file
  * @throws Error if the download response is unsuccessful
  */
@@ -146,6 +146,7 @@ CRITICAL RULES:
  *
  * @param prompt - The OCR analysis prompt to submit
  * @returns The provider's response text
+ * @throws If OpenAI is selected without an API key or the AI provider is unsupported
  */
 export async function callAiProvider(prompt: string): Promise<string> {
   const config = loadConfig();
@@ -165,10 +166,10 @@ export async function callAiProvider(prompt: string): Promise<string> {
 }
 
 /**
- * Parses an AI response into a normalized OCR analysis result.
+ * Normalizes a JSON-formatted AI response into an OCR analysis result.
  *
- * @param raw - The AI response, optionally wrapped in a Markdown JSON code block
- * @returns The normalized analysis with validated category fields, confidence, reasoning, and expense amount in cents
+ * @param raw - The AI response, optionally enclosed in a Markdown JSON code block
+ * @returns The normalized analysis with amount, category fields, confidence, and reasoning
  */
 export function parseAiResponse(raw: string): OcrAnalysis {
   let cleaned = raw.trim();
@@ -253,11 +254,12 @@ export function validateCategoryMatch(
 }
 
 /**
- * Analyzes a Telegram receipt image and produces a categorized budget result.
+ * Analyzes a Telegram receipt and produces a categorized budget result.
  *
+ * @param botToken - The Telegram bot token used to download the receipt image
  * @param fileUrl - The Telegram file URL for the receipt image
  * @param ocrText - Optional pre-extracted text; when provided, image download and OCR are skipped
- * @returns The extracted amount, matched category, confidence, and reasoning
+ * @returns The normalized amount, matched category, confidence, and reasoning
  */
 export async function processScreenshot(
   botToken: string,
@@ -292,11 +294,12 @@ export async function processScreenshot(
 }
 
 /**
- * Sends a prompt to an Ollama-compatible endpoint and retrieves its generated text.
+ * Sends a prompt to an Ollama-compatible endpoint and retrieves the generated text.
  *
- * @param url - The Ollama endpoint URL
- * @param model - The model to use for generation
+ * @param url - The endpoint URL
+ * @param model - The model to use
  * @param prompt - The prompt to send
+ * @param timeoutMs - The request timeout in milliseconds
  * @returns The generated response text
  */
 
@@ -324,13 +327,14 @@ async function callOllama(url: string, model: string, prompt: string, timeoutMs:
 }
 
 /**
- * Sends a prompt to the OpenAI chat completions API and retrieves its response content.
+ * Sends a prompt to the OpenAI chat completions API and retrieves the generated content.
  *
  * @param apiKey - The API key used for authentication
  * @param model - The OpenAI model to use
- * @param prompt - The user prompt to submit
+ * @param prompt - The expense categorization prompt
  * @param timeoutMs - The request timeout in milliseconds
  * @returns The response content, or an empty string when no content is available
+ * @throws {Error} If the API response is not successful
  */
 async function callOpenAi(apiKey: string, model: string, prompt: string, timeoutMs: number = 60_000): Promise<string> {
   const controller = new AbortController();

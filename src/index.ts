@@ -632,7 +632,7 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
 });
 
 /**
- * Initializes the Actual API, starts the Telegram bot, and handles graceful shutdown signals.
+ * Initializes the Actual integration, launches the Telegram bot, and handles graceful shutdown signals.
  */
 
 async function start(): Promise<void> {
