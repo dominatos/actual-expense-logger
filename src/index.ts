@@ -5,6 +5,8 @@ import { initActual, getCategories, getAccounts, addTransaction, finalize } from
 import { processScreenshot, countAmountsInOcr, extractTextFromImage, downloadTelegramPhoto, buildAnalysisPrompt, callAiProvider, parseAiResponse, type OcrAnalysis } from './ocr';
 import { loadRules, saveRule, deleteRule, matchRule, type Rule } from './rules';
 import { unlink } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 // --- Types ---
 
@@ -79,10 +81,20 @@ bot.catch((err, ctx) => {
   ctx.reply('An unexpected error occurred. Please try again.').catch(console.error);
 });
 
+// --- Welcome Message ---
+let START_MESSAGE = 'Welcome! Send me an expense amount (e.g. 15.50 or 42) to add a transaction.';
+try {
+  const pkgPath = join(__dirname, '..', 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+  START_MESSAGE += `\nBot Version: v${pkg.version}\nGitHub: https://github.com/dominatos/actual-expense-logger`;
+} catch (e) {
+  console.error('Failed to read version:', e);
+}
+
 // --- Commands ---
 
 bot.start((ctx) => {
-  ctx.reply('Welcome! Send me an expense amount (e.g. 15.50 or 42) to add a transaction.');
+  ctx.reply(START_MESSAGE);
 });
 
 // Helper: show category selection keyboard
@@ -645,6 +657,13 @@ async function start(): Promise<void> {
     console.log('Starting Telegram bot...');
     await bot.launch();
     console.log('Bot is running.');
+
+    // Notify allowed users of the restart
+    for (const userId of config.allowedUserIds) {
+      bot.telegram.sendMessage(userId, `Bot started/restarted.\n\n${START_MESSAGE}`).catch(err => {
+        console.error(`Failed to send startup message to user ${userId}:`, err);
+      });
+    }
   } catch (error) {
     console.error('Failed to start application:', error);
     process.exit(1);
