@@ -548,6 +548,11 @@ bot.action('ocr_create_rule', async (ctx) => {
 
   await ctx.answerCbQuery();
 
+  if (!ocrPending.categoryId || !ocrPending.categoryName) {
+    await ctx.reply('Cannot create rule: no category selected yet. Please assign a category first.');
+    return;
+  }
+
   // Extract a pattern from the OCR text (first meaningful word/phrase)
   const pattern = ocrPending.ocrText.split(/\s+/).slice(0, 3).join(' ').toUpperCase() || 'UNKNOWN';
 

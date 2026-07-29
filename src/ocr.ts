@@ -179,11 +179,23 @@ export function parseAiResponse(raw: string): OcrAnalysis {
 
   const parsed = JSON.parse(cleaned);
 
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return {
+      amountInCents: null,
+      categoryId: null,
+      categoryName: null,
+      confidence: 'low',
+      reasoning: 'Failed to parse AI response: not a valid object.',
+    };
+  }
+
+  const record = parsed as Record<string, unknown>;
+
   // Only non-negative numeric amounts are valid expenses; negative values are rejected.
   // Reject amounts that would exceed Number.MAX_SAFE_INTEGER after conversion.
   let amountInCents: number | null = null;
-  if (typeof parsed.amount === 'number' && parsed.amount >= 0) {
-    const rounded = Math.round(parsed.amount * 100);
+  if (typeof record.amount === 'number' && record.amount >= 0) {
+    const rounded = Math.round(record.amount * 100);
     if (Number.isSafeInteger(rounded)) {
       amountInCents = -rounded;
     }
@@ -191,10 +203,10 @@ export function parseAiResponse(raw: string): OcrAnalysis {
 
   return {
     amountInCents,
-    categoryId: typeof parsed.categoryId === 'string' ? parsed.categoryId : null,
-    categoryName: typeof parsed.categoryName === 'string' ? parsed.categoryName : null,
-    confidence: ['high', 'medium', 'low'].includes(parsed.confidence) ? parsed.confidence : 'low',
-    reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : '',
+    categoryId: typeof record.categoryId === 'string' ? record.categoryId : null,
+    categoryName: typeof record.categoryName === 'string' ? record.categoryName : null,
+    confidence: ['high', 'medium', 'low'].includes(record.confidence as string) ? record.confidence as OcrAnalysis['confidence'] : 'low',
+    reasoning: typeof record.reasoning === 'string' ? record.reasoning : '',
   };
 }
 

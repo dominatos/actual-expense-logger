@@ -34,11 +34,26 @@ export function loadRules(): Rule[] {
   const rulesPath = getRulesPath();
   if (!existsSync(rulesPath)) return [];
   const raw = readFileSync(rulesPath, 'utf8');
-  const parsed = JSON.parse(raw) as RulesFile;
-  if (!Array.isArray(parsed.rules)) {
+  const parsed = JSON.parse(raw) as Partial<RulesFile>;
+  if (!parsed || !Array.isArray(parsed.rules)) {
     throw new Error(`Malformed rules file at ${rulesPath}: expected { rules: [...] }`);
   }
-  return parsed.rules;
+  
+  for (const rule of parsed.rules) {
+    if (
+      !rule || 
+      typeof rule !== 'object' || 
+      typeof (rule as any).id !== 'string' || 
+      typeof (rule as any).pattern !== 'string' || 
+      typeof (rule as any).categoryId !== 'string' || 
+      typeof (rule as any).categoryName !== 'string' || 
+      typeof (rule as any).createdAt !== 'string'
+    ) {
+      throw new Error(`Malformed rules file at ${rulesPath}: invalid rule entry`);
+    }
+  }
+
+  return parsed.rules as Rule[];
 }
 
 /**
