@@ -43,7 +43,7 @@ export function loadRules(): Rule[] {
     if (!item || typeof item !== 'object') {
       throw new Error(`Malformed rules file at ${rulesPath}: invalid rule entry`);
     }
-    const rule = item as Record<string, unknown>;
+    const rule = item as unknown as Record<string, unknown>;
     if (
       typeof rule.id !== 'string' || 
       typeof rule.pattern !== 'string' || 
