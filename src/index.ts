@@ -655,15 +655,16 @@ async function start(): Promise<void> {
     process.once('SIGTERM', () => shutdown('SIGTERM'));
 
     console.log('Starting Telegram bot...');
-    await bot.launch();
-    console.log('Bot is running.');
-
-    // Notify allowed users of the restart
+    
+    // Notify allowed users of the restart before we block on launch
     for (const userId of config.allowedUserIds) {
       bot.telegram.sendMessage(userId, `Bot started/restarted.\n\n${START_MESSAGE}`).catch(err => {
         console.error(`Failed to send startup message to user ${userId}:`, err);
       });
     }
+
+    console.log('Bot is running.');
+    await bot.launch();
   } catch (error) {
     console.error('Failed to start application:', error);
     process.exit(1);
