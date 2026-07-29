@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.22] - 2026-07-29
+
+### Added
+
+- **Native Vision AI OCR** — Added `OCR_ENGINE=vision` configuration, allowing the bot to bypass Tesseract and pass receipt screenshots directly to local Vision models (like `qwen2.5-vl:7b`) for higher accuracy.
+- **Ollama Memory Management** — Added `OLLAMA_KEEP_ALIVE` configuration (defaults to `0`) to automatically unload Ollama models from VRAM immediately after processing, freeing up GPU resources.
+- **Specialized Vision Prompts** — Added a targeted `buildVisionPrompt()` for pure image-to-text extraction, avoiding misleading text templates used by the fallback Tesseract engine.
+
 ## [1.4.21] - 2026-07-29
 
 ### Fixed

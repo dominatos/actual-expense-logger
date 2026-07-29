@@ -261,7 +261,7 @@ async function sendOcrSuggestion(ctx: BotContext, analysis: OcrAnalysis, ocrText
     '',
     'OCR text:',
     '```',
-    ocrPreview || '(no text detected)',
+    ocrPreview || (config.ocrEngine === 'vision' ? '(Handled by Vision AI)' : '(no text detected)'),
     '```',
   ];
 
@@ -300,23 +300,18 @@ bot.on('photo', async (ctx) => {
       captionAmount = parseAmountToCents(caption);
     }
 
-    // Check local rules first (before AI)
-    // We need OCR text for rule matching, so run OCR first
-    const ocrConfig = loadConfig();
-
-    // Download and OCR the image
+    // Download the image
     const tmpPath = await downloadTelegramPhoto(config.telegramBotToken, fileUrl);
     let ocrText = '';
-    try {
-      ocrText = await extractTextFromImage(tmpPath, ocrConfig.ocrLanguage, ocrConfig.ocrCacheDir);
-    } finally {
-      await unlink(tmpPath).catch(() => {});
-    }
-
-    // Check rules
-    const matchedRule = matchRule(ocrText);
-
     let analysis: OcrAnalysis;
+    let matchedRule: ReturnType<typeof matchRule> = null;
+
+    try {
+      // Check local rules first (before AI) — only possible with Tesseract
+      if (config.ocrEngine === 'tesseract') {
+        ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
+        matchedRule = matchRule(ocrText);
+      }
 
     if (matchedRule && captionAmount !== null) {
       // Rule matched + caption override: use both
@@ -342,10 +337,14 @@ bot.on('photo', async (ctx) => {
         reasoning: `Rule matched: ${matchedRule.pattern}. ${aiResult.reasoning}`,
       };
     } else {
-      // No rule: full AI pipeline
-      console.log('[OCR] No rule matched, running full AI pipeline');
-      analysis = await processScreenshot(config.telegramBotToken, fileUrl, ocrText);
+      // No rule or vision engine: full AI pipeline
+      console.log('[OCR] No rule matched or vision selected, running full AI pipeline');
+      analysis = await processScreenshot(tmpPath, config.ocrEngine === 'tesseract' ? ocrText : undefined);
       console.log(`[OCR] AI result: categoryId=${analysis.categoryId}, categoryName=${analysis.categoryName}, amount=${analysis.amountInCents}`);
+    }
+    
+    } finally {
+      await unlink(tmpPath).catch(() => {});
     }
 
     ctx.session ??= {};

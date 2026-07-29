@@ -88,10 +88,12 @@ export interface AppConfig {
   aiProvider: 'ollama' | 'openai' | undefined;
   ollamaUrl: string;
   ollamaModel: string;
+  ollamaKeepAlive: string | number;
   openaiApiKey: string | undefined;
   openaiModel: string;
   ocrLanguage: string;
   ocrCacheDir: string;
+  ocrEngine: 'tesseract' | 'vision';
 }
 
 let _config: AppConfig | null = null;
@@ -144,10 +146,21 @@ export function loadConfig(): AppConfig {
   }
   const ollamaUrl = optional('OLLAMA_URL', 'http://host.docker.internal:11434/api/generate');
   const ollamaModel = optional('OLLAMA_MODEL', 'qwen3:8b');
+  const ollamaKeepAliveRaw = optional('OLLAMA_KEEP_ALIVE', '0');
+  const ollamaKeepAlive = !isNaN(Number(ollamaKeepAliveRaw)) ? Number(ollamaKeepAliveRaw) : ollamaKeepAliveRaw;
   const openaiApiKey = readSecret('OPENAI_API_KEY') || undefined;
   const openaiModel = optional('OPENAI_MODEL', 'gpt-4o');
   const ocrLanguage = optional('OCR_LANGUAGE', 'eng');
   const ocrCacheDir = optional('OCR_CACHE_DIR', `${actualDataDir}/ocr-cache`);
+  const ocrEngineRaw = optional('OCR_ENGINE', 'tesseract').toLowerCase();
+  let ocrEngine: 'tesseract' | 'vision';
+  if (ocrEngineRaw === 'vision') {
+    ocrEngine = 'vision';
+  } else if (ocrEngineRaw === 'tesseract') {
+    ocrEngine = 'tesseract';
+  } else {
+    throw new Error(`Invalid OCR_ENGINE value "${ocrEngineRaw}": must be "tesseract" or "vision"`);
+  }
 
   _config = {
     telegramBotToken,
@@ -162,10 +175,12 @@ export function loadConfig(): AppConfig {
     aiProvider,
     ollamaUrl,
     ollamaModel,
+    ollamaKeepAlive,
     openaiApiKey,
     openaiModel,
     ocrLanguage,
     ocrCacheDir,
+    ocrEngine,
   };
 
   return _config;

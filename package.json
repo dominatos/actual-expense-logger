@@ -1,6 +1,6 @@
 {
   "name": "actual-expense-logger",
-  "version": "1.4.21",
+  "version": "1.4.22",
   "description": "Telegram bot for adding transactions to Actual Budget",
   "main": "dist/index.js",
   "scripts": {

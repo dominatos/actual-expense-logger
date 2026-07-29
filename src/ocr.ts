@@ -1,4 +1,4 @@
-import { writeFile, unlink, mkdir } from 'fs/promises';
+import { writeFile, unlink, mkdir, readFile } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { loadConfig } from './config';
@@ -142,17 +142,48 @@ CRITICAL RULES:
 }
 
 /**
+ * Builds a prompt optimized for vision models that analyze receipt images directly.
+ *
+ * @param categories - Budget categories available for matching.
+ * @returns A prompt instructing the vision model to read the receipt image and return structured JSON.
+ */
+export function buildVisionPrompt(categories: Category[]): string {
+  const categoryList = categories
+    .map((c, i) => `${i + 1}. [${c.id}] ${c.name}`)
+    .join('\n');
+
+  return `Look at this receipt image carefully. Read ALL text visible on the receipt.
+
+Find:
+1. The TOTAL amount paid (look for "TOTALE", "TOTALE COMPLESSIVO", "Total", or the largest/final amount)
+2. The store or merchant name (usually at the top of the receipt)
+
+Available budget categories:
+${categoryList || '(No categories available)'}
+
+Match the store/merchant to the best category from the list above. Use the EXACT categoryId and categoryName from the list.
+
+Respond with ONLY valid JSON, no markdown, no explanation:
+{"amount": <number>, "categoryId": "<exact id from list>", "categoryName": "<exact name from list>", "confidence": "high", "reasoning": "<what you see on the receipt>"}
+
+Rules:
+- amount must be a positive number (e.g. 199.00, not -199.00)
+- Read the actual receipt in the image. Do NOT make up or guess values.
+- If you cannot read the receipt clearly, set amount to null and confidence to "low"`;
+}
+
+/**
  * Sends an analysis prompt to the configured AI provider.
  *
  * @param prompt - The OCR analysis prompt to submit
  * @returns The provider's response text
  * @throws If OpenAI is selected without an API key or the AI provider is unsupported
  */
-export async function callAiProvider(prompt: string): Promise<string> {
+export async function callAiProvider(prompt: string, images?: string[]): Promise<string> {
   const config = loadConfig();
 
   if (config.aiProvider === 'ollama') {
-    return callOllama(config.ollamaUrl, config.ollamaModel, prompt);
+    return callOllama(config.ollamaUrl, config.ollamaModel, prompt, 120_000, images, config.ollamaKeepAlive);
   }
 
   if (config.aiProvider === 'openai') {
@@ -289,34 +320,40 @@ export function validateCategoryMatch(
  * @returns The normalized amount, matched category, confidence, and reasoning
  */
 export async function processScreenshot(
-  botToken: string,
-  fileUrl: string,
+  imagePath: string,
   ocrText?: string,
 ): Promise<OcrAnalysis> {
   const config = loadConfig();
-  let tmpPath: string | null = null;
 
   try {
-    let text: string;
+    let text = '';
+    let images: string[] | undefined = undefined;
+
     if (ocrText === undefined) {
-      tmpPath = await downloadTelegramPhoto(botToken, fileUrl);
-      text = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
+      if (config.ocrEngine === 'vision') {
+        const imageBuffer = await readFile(imagePath);
+        images = [imageBuffer.toString('base64')];
+        console.log(`[OCR] Vision engine selected. Sending image (${imageBuffer.length} bytes) to AI.`);
+      } else {
+        text = await extractTextFromImage(imagePath, config.ocrLanguage, config.ocrCacheDir);
+        console.log(`[OCR] Extracted text (${text.length} chars): ${text.substring(0, 200)}`);
+      }
     } else {
       text = ocrText;
+      console.log(`[OCR] Using provided text (${text.length} chars)`);
     }
-    console.log(`[OCR] Extracted text (${text.length} chars): ${text.substring(0, 200)}`);
+    
     const categories = await getCategories();
     console.log(`[OCR] Available categories: ${categories.map((c) => `${c.id}=${c.name}`).join(', ')}`);
-    const prompt = buildAnalysisPrompt(text, categories);
-    const rawResponse = await callAiProvider(prompt);
+    const prompt = images ? buildVisionPrompt(categories) : buildAnalysisPrompt(text, categories);
+    const rawResponse = await callAiProvider(prompt, images);
     console.log(`[OCR] Raw AI response: ${rawResponse.substring(0, 500)}`);
     const result = parseAiResponse(rawResponse);
     console.log(`[OCR] Parsed result: categoryId=${result.categoryId}, categoryName=${result.categoryName}, amount=${result.amountInCents}`);
     return validateCategoryMatch(result, categories);
-  } finally {
-    if (tmpPath) {
-      await unlink(tmpPath).catch(() => {});
-    }
+  } catch (error) {
+    console.error('[OCR] processScreenshot error:', error);
+    throw error;
   }
 }
 
@@ -330,14 +367,14 @@ export async function processScreenshot(
  * @returns The generated response text
  */
 
-async function callOllama(url: string, model: string, prompt: string, timeoutMs: number = 120_000): Promise<string> {
+async function callOllama(url: string, model: string, prompt: string, timeoutMs: number = 120_000, images?: string[], keepAlive: string | number = 0): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, stream: false }),
+      body: JSON.stringify({ model, prompt, stream: false, images, keep_alive: keepAlive }),
       signal: controller.signal,
     });
 
