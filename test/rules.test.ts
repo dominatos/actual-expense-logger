@@ -27,14 +27,14 @@ describe('rules', () => {
       expect(loadRules()).toEqual([]);
     });
 
-    it('returns empty array when file is invalid JSON', () => {
+    it('throws when file contains invalid JSON', () => {
       writeFileSync(TEST_RULES_PATH, 'not-json', 'utf8');
-      expect(loadRules()).toEqual([]);
+      expect(() => loadRules()).toThrow();
     });
 
-    it('returns empty array when rules key is missing', () => {
+    it('throws when rules key is missing', () => {
       writeFileSync(TEST_RULES_PATH, '{"other": []}', 'utf8');
-      expect(loadRules()).toEqual([]);
+      expect(() => loadRules()).toThrow(/Malformed rules file/);
     });
 
     it('loads rules from file', () => {
@@ -74,6 +74,16 @@ describe('rules', () => {
     it('normalizes pattern to uppercase', () => {
       const rule = saveRule('uber eats', 'cat-1', 'Food');
       expect(rule.pattern).toBe('UBER EATS');
+    });
+
+    it('rejects empty pattern', () => {
+      expect(() => saveRule('', 'cat-1', 'Food')).toThrow('Rule pattern must not be empty or whitespace-only');
+      expect(loadRules()).toEqual([]);
+    });
+
+    it('rejects whitespace-only pattern', () => {
+      expect(() => saveRule('   ', 'cat-1', 'Food')).toThrow('Rule pattern must not be empty or whitespace-only');
+      expect(loadRules()).toEqual([]);
     });
   });
 

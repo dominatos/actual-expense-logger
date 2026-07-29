@@ -26,19 +26,18 @@ function getRulesPath(): string {
 
 /**
  * Load all rules from the JSON file.
- * Returns an empty array if the file doesn't exist or is invalid.
+ * Returns an empty array if the file doesn't exist.
+ * Throws if the file exists but contains malformed JSON or an invalid shape.
  */
 export function loadRules(): Rule[] {
   const rulesPath = getRulesPath();
-  try {
-    if (!existsSync(rulesPath)) return [];
-    const raw = readFileSync(rulesPath, 'utf8');
-    const parsed = JSON.parse(raw) as RulesFile;
-    if (!Array.isArray(parsed.rules)) return [];
-    return parsed.rules;
-  } catch {
-    return [];
+  if (!existsSync(rulesPath)) return [];
+  const raw = readFileSync(rulesPath, 'utf8');
+  const parsed = JSON.parse(raw) as RulesFile;
+  if (!Array.isArray(parsed.rules)) {
+    throw new Error(`Malformed rules file at ${rulesPath}: expected { rules: [...] }`);
   }
+  return parsed.rules;
 }
 
 /**
@@ -65,6 +64,10 @@ function saveRulesToFile(rules: Rule[]): void {
 export function saveRule(pattern: string, categoryId: string, categoryName: string): Rule {
   const rules = loadRules();
   const normalizedPattern = pattern.trim().toUpperCase();
+
+  if (!normalizedPattern) {
+    throw new Error('Rule pattern must not be empty or whitespace-only');
+  }
 
   // Remove existing rule with same pattern
   const filtered = rules.filter((r) => r.pattern.toUpperCase() !== normalizedPattern);

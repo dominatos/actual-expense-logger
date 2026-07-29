@@ -179,10 +179,14 @@ export function parseAiResponse(raw: string): OcrAnalysis {
   const parsed = JSON.parse(cleaned);
 
   // Only non-negative numeric amounts are valid expenses; negative values are rejected.
-  const amountInCents =
-    typeof parsed.amount === 'number' && parsed.amount >= 0
-      ? -Math.round(parsed.amount * 100)
-      : null;
+  // Reject amounts that would exceed Number.MAX_SAFE_INTEGER after conversion.
+  let amountInCents: number | null = null;
+  if (typeof parsed.amount === 'number' && parsed.amount >= 0) {
+    const rounded = Math.round(parsed.amount * 100);
+    if (Number.isSafeInteger(rounded)) {
+      amountInCents = -rounded;
+    }
+  }
 
   return {
     amountInCents,

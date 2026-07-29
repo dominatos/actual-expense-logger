@@ -112,6 +112,15 @@ describe('parseAmountToCents', () => {
     // 0.001 * 100 = 0.1, rounded = 0
     expect(Object.is(parseAmountToCents('0.001'), -0)).toBe(true);
   });
+
+  // --- Locale-aware grouped formats (regression) ---
+  it('parses European grouped "1.234,56" to -123456', () => {
+    expect(parseAmountToCents('1.234,56')).toBe(-123456);
+  });
+
+  it('parses US grouped "1,234.56" to -123456', () => {
+    expect(parseAmountToCents('1,234.56')).toBe(-123456);
+  });
 });
 
 describe('parseUserIds', () => {

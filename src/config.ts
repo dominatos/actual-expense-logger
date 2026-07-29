@@ -126,10 +126,16 @@ export function loadConfig(): AppConfig {
 
   // OCR + AI configuration (optional)
   const aiProviderRaw = optional('AI_PROVIDER', '').toLowerCase();
-  const aiProvider: 'ollama' | 'openai' | undefined =
-    aiProviderRaw === 'ollama' ? 'ollama' :
-    aiProviderRaw === 'openai' ? 'openai' :
-    undefined;
+  let aiProvider: 'ollama' | 'openai' | undefined;
+  if (aiProviderRaw === '') {
+    aiProvider = undefined;
+  } else if (aiProviderRaw === 'ollama') {
+    aiProvider = 'ollama';
+  } else if (aiProviderRaw === 'openai') {
+    aiProvider = 'openai';
+  } else {
+    throw new Error(`Invalid AI_PROVIDER value "${process.env.AI_PROVIDER}": must be "ollama", "openai", or unset`);
+  }
   const ollamaUrl = optional('OLLAMA_URL', 'http://host.docker.internal:11434/api/generate');
   const ollamaModel = optional('OLLAMA_MODEL', 'qwen3:8b');
   const openaiApiKey = readSecret('OPENAI_API_KEY') || undefined;

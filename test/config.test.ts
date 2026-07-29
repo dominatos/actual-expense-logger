@@ -274,5 +274,16 @@ describe('loadConfig', () => {
     // Default values
     expect(config.ocrLanguage).toBe('eng');
   });
+
+  it('throws if AI_PROVIDER is an invalid value', async () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    process.env['AI_PROVIDER'] = 'banana';
+
+    expect(() => loadConfig()).toThrow(/Invalid AI_PROVIDER value/);
+  });
 });
 

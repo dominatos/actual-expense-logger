@@ -5,9 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.14] - 2026-07-28
+## [1.4.15] - 2026-07-29
 
-### Added
+### Fixed
+
+- **Config validation** — `AI_PROVIDER` now throws an error on invalid non-empty values instead of silently mapping them to `undefined`.
+- **Amount parsing** — Removed a duplicate, legacy `parseAmountToCents` in `src/index.ts` that lacked locale-aware separator handling. All parsing now correctly uses the version in `src/utils.ts`.
+- **Rule pattern validation** — `saveRule` now rejects empty or whitespace-only patterns, preventing a bug where an empty pattern would match every OCR result and silently auto-categorize everything.
+- **Rule file corruption protection** — `loadRules` now treats malformed JSON as corruption and throws an error instead of returning an empty array. This prevents `saveRule` from overwriting a corrupted rule file and permanently losing user data.
+- **Oversized amount guard** — Added a `Number.isSafeInteger` guard to `parseAiResponse` to reject astronomically large AI-generated amounts that exceed the safe integer limit when converted to cents.
+
+## [1.4.14] - 2026-07-28
 
 - **Unauthorized User Reply** — The bot now explicitly replies with a "You are not authorized to use this bot" message to unauthorized users instead of silently ignoring them, providing clearer feedback.
 

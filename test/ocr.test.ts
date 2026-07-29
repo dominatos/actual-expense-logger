@@ -126,6 +126,19 @@ describe('parseAiResponse', () => {
     expect(result.amountInCents).toBeNull();
   });
 
+  it('rejects oversized amounts that exceed safe integers', () => {
+    // 9007199254740993 is Number.MAX_SAFE_INTEGER + 2
+    // Even smaller values like 90071992547409.93 * 100 could exceed
+    const raw = JSON.stringify({
+      amount: 9007199254740993,
+      categoryId: 'cat-1',
+      categoryName: 'Food',
+      confidence: 'high'
+    });
+    const result = parseAiResponse(raw);
+    expect(result.amountInCents).toBeNull();
+  });
+
   it('throws on completely invalid JSON', () => {
     expect(() => parseAiResponse('not json at all')).toThrow();
   });
