@@ -82,7 +82,7 @@ bot.catch((err, ctx) => {
 });
 
 // --- Welcome Message ---
-let START_MESSAGE = 'Welcome! Send me an expense amount (e.g. 15.50 or 42) to add a transaction.';
+let START_MESSAGE = 'Welcome! Send me an expense amount (e.g. 15.50 or 42) or a screenshot of a receipt to add a transaction.';
 try {
   const pkgPath = join(__dirname, '..', 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
