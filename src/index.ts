@@ -18,6 +18,7 @@ interface SessionData {
     categoryId: string;
     categoryName: string;
     ocrText: string;
+    accountId?: string;
   };
 }
 
@@ -656,10 +657,10 @@ async function start(): Promise<void> {
 
     console.log('Starting Telegram bot...');
     
-    // Notify allowed users of the restart before we block on launch
     for (const userId of config.allowedUserIds) {
       bot.telegram.sendMessage(userId, `Bot started/restarted.\n\n${START_MESSAGE}`).catch(err => {
-        console.warn(`⚠️ Could not send startup message to user ${userId} (they may need to start a chat with the bot first): ${err.message || err}`);
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`⚠️ Could not send startup message to user ${userId} (they may need to start a chat with the bot first): ${errMsg}`);
       });
     }
 
