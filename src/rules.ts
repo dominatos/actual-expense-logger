@@ -51,7 +51,8 @@ export function loadRules(): Rule[] {
       typeof rule.categoryName !== 'string' || 
       typeof rule.createdAt !== 'string' ||
       rule.pattern.trim() === '' ||
-      rule.categoryId.trim() === ''
+      rule.categoryId.trim() === '' ||
+      rule.categoryName.trim() === ''
     ) {
       throw new Error(`Malformed rules file at ${rulesPath}: invalid rule entry`);
     }
@@ -84,10 +85,21 @@ function saveRulesToFile(rules: Rule[]): void {
  */
 export function saveRule(pattern: string, categoryId: string, categoryName: string): Rule {
   const rules = loadRules();
-  const normalizedPattern = pattern.trim().toUpperCase();
+  const normalizedPattern = pattern.trim().replace(/\s+/g, ' ').toUpperCase();
 
   if (!normalizedPattern) {
     throw new Error('Rule pattern must not be empty or whitespace-only');
+  }
+
+  const trimmedCategoryId = categoryId.trim();
+  const trimmedCategoryName = categoryName.trim();
+
+  if (!trimmedCategoryId) {
+    throw new Error('Rule categoryId must not be empty or whitespace-only');
+  }
+
+  if (!trimmedCategoryName) {
+    throw new Error('Rule categoryName must not be empty or whitespace-only');
   }
 
   // Remove existing rule with same pattern
@@ -96,8 +108,8 @@ export function saveRule(pattern: string, categoryId: string, categoryName: stri
   const newRule: Rule = {
     id: randomUUID(),
     pattern: normalizedPattern,
-    categoryId,
-    categoryName,
+    categoryId: trimmedCategoryId,
+    categoryName: trimmedCategoryName,
     createdAt: new Date().toISOString(),
   };
 
@@ -128,11 +140,12 @@ export function deleteRule(id: string): boolean {
  */
 export function matchRule(ocrText: string): Rule | null {
   const rules = loadRules();
-  const upperText = ocrText.toUpperCase();
+  // Normalize whitespace to single spaces so multiline Tesseract text matches multi-word rules
+  const normalizedOcrText = ocrText.replace(/\s+/g, ' ').toUpperCase();
 
   // Find all matches, sorted by most recent first
   const matches = rules
-    .filter((r) => upperText.includes(r.pattern))
+    .filter((r) => normalizedOcrText.includes(r.pattern))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
   return matches[0] ?? null;

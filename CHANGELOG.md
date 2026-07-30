@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.25] - 2026-07-30
+
+### Fixed
+
+- **OCR Rule Matching** — Normalized whitespace (e.g. multiple spaces, newlines) when matching rule patterns against text extracted by Tesseract. This fixes an issue where valid rules were bypassed and full AI vision requests were triggered because Tesseract occasionally introduces arbitrary line breaks or spaces in its output.
+
+## [1.4.24] - 2026-07-30
+
+### Added
+
+- **Vision mode rule creation** — AI now returns a structured `merchant` field in both Tesseract and Vision prompts. Rules can be created in Vision mode using the AI-identified merchant name, with fallback to Tesseract-extracted OCR text.
+- **Tesseract runs in both OCR engines** — Tesseract now always extracts text for rule matching, regardless of the configured OCR engine. Vision mode uses the image for categorization while Tesseract provides the text for rule matching. This ensures rules work reliably in both modes.
+- Tests for merchant field parsing in `parseAiResponse`, prompt schema validation for `buildAnalysisPrompt` and `buildVisionPrompt`.
+
+## [1.4.23] - 2026-07-30
+
+### Fixed
+
+- **Hide rule-creation button for empty OCR text** — The "Create rule for this merchant" button is now hidden when OCR text is empty (Vision mode), preventing creation of useless `UNKNOWN` rules. The handler also explicitly rejects empty text as a safety guard.
+- **Redacted receipt content from logs** — Removed receipt text and AI response content from console logs in `processScreenshot`, keeping only lengths for debugging. Prevents personal financial data from leaking into log output.
+- **OpenAI vision mode support** — `callOpenAi` now accepts optional base64-encoded images and builds the required vision messages payload when present. `callAiProvider` now passes images through to OpenAI, enabling `OCR_ENGINE=vision` with `gpt-4o`.
+- **Rule category field validation** — `saveRule` now trims and validates `categoryId` and `categoryName`, rejecting blank values with an error. `loadRules` now rejects rules with blank `categoryName` in addition to the existing `categoryId` check.
+
+### Added
+
+- Regression test for ungrouped comma-decimal input `"12,34"` in `parseAmountToCents`.
+- Tests for `saveRule` blank `categoryId`/`categoryName` rejection and whitespace trimming.
+- Test for `loadRules` blank `categoryName` rejection.
+
 ## [1.4.22] - 2026-07-29
 
 ### Added

@@ -18,6 +18,7 @@ interface SessionData {
     categoryId: string;
     categoryName: string;
     ocrText: string;
+    merchantName: string;
     accountId?: string;
   };
 }
@@ -142,6 +143,7 @@ bot.on('text', async (ctx) => {
       categoryName: ctx.session.ocrPending.categoryName,
       confidence: 'medium',
       reasoning: 'Amount manually adjusted',
+      merchantName: ctx.session.ocrPending.merchantName,
     };
     await sendOcrSuggestion(ctx, updatedAnalysis, ctx.session.ocrPending.ocrText);
     return;
@@ -272,8 +274,12 @@ async function sendOcrSuggestion(ctx: BotContext, analysis: OcrAnalysis, ocrText
       { text: 'Change Category', callback_data: 'ocr_change_cat' },
     ],
     [{ text: 'Cancel', callback_data: 'ocr_cancel' }],
-    [{ text: 'Create rule for this merchant', callback_data: 'ocr_create_rule' }],
   ];
+
+  const hasMerchant = analysis.merchantName.trim().length > 0;
+  if (ocrText.trim() || hasMerchant) {
+    buttons.push([{ text: 'Create rule for this merchant', callback_data: 'ocr_create_rule' }]);
+  }
 
   await ctx.reply(lines.filter(Boolean).join('\n'), {
     reply_markup: { inline_keyboard: buttons },
@@ -307,11 +313,9 @@ bot.on('photo', async (ctx) => {
     let matchedRule: ReturnType<typeof matchRule> = null;
 
     try {
-      // Check local rules first (before AI) — only possible with Tesseract
-      if (config.ocrEngine === 'tesseract') {
-        ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
-        matchedRule = matchRule(ocrText);
-      }
+      // Always extract text for rule matching — works in both Tesseract and Vision modes
+      ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
+      matchedRule = matchRule(ocrText);
 
     if (matchedRule && captionAmount !== null) {
       // Rule matched + caption override: use both
@@ -322,6 +326,7 @@ bot.on('photo', async (ctx) => {
         categoryName: matchedRule.categoryName,
         confidence: 'high',
         reasoning: `Rule matched: ${matchedRule.pattern}`,
+        merchantName: matchedRule.pattern,
       };
     } else if (matchedRule) {
       // Rule matched, no caption: use OCR for amount, rule for category
@@ -339,7 +344,7 @@ bot.on('photo', async (ctx) => {
     } else {
       // No rule or vision engine: full AI pipeline
       console.log('[OCR] No rule matched or vision selected, running full AI pipeline');
-      analysis = await processScreenshot(tmpPath, config.ocrEngine === 'tesseract' ? ocrText : undefined);
+      analysis = await processScreenshot(tmpPath, ocrText);
       console.log(`[OCR] AI result: categoryId=${analysis.categoryId}, categoryName=${analysis.categoryName}, amount=${analysis.amountInCents}`);
     }
     
@@ -358,6 +363,7 @@ bot.on('photo', async (ctx) => {
         categoryId: analysis.categoryId,
         categoryName: analysis.categoryName ?? '',
         ocrText: ocrText,
+        merchantName: analysis.merchantName,
       };
       console.log(`[OCR] Stored ocrPending: categoryId=${analysis.categoryId}, categoryName=${analysis.categoryName}`);
 
@@ -389,6 +395,7 @@ bot.on('photo', async (ctx) => {
         categoryId: '',
         categoryName: '',
         ocrText: ocrText,
+        merchantName: analysis.merchantName,
       };
 
       if (config.accounts.length === 1) {
@@ -399,6 +406,7 @@ bot.on('photo', async (ctx) => {
           categoryName: null,
           confidence: 'low',
           reasoning: analysis.reasoning,
+          merchantName: analysis.merchantName,
         }, ocrText);
       } else {
         // Multiple accounts: show account selection first, then sendOcrSuggestion via acc_ocr_ handler
@@ -448,6 +456,7 @@ bot.action(/^acc_ocr_(.+)$/, async (ctx) => {
     categoryName: ocrPending.categoryName,
     confidence: 'high',
     reasoning: ocrPending.ocrText,
+    merchantName: ocrPending.merchantName,
   }, ocrPending.ocrText);
 });
 
@@ -547,13 +556,18 @@ bot.action('ocr_create_rule', async (ctx) => {
 
   await ctx.answerCbQuery();
 
+  const merchantSource = ocrPending.merchantName?.trim() || ocrPending.ocrText.trim();
+  if (!merchantSource) {
+    await ctx.reply('Cannot create rule: no merchant name or OCR text available.');
+    return;
+  }
+
   if (!ocrPending.categoryId?.trim() || !ocrPending.categoryName?.trim()) {
     await ctx.reply('Cannot create rule: no category selected yet. Please assign a category first.');
     return;
   }
 
-  // Extract a pattern from the OCR text (first meaningful word/phrase)
-  const pattern = ocrPending.ocrText.split(/\s+/).slice(0, 3).join(' ').toUpperCase() || 'UNKNOWN';
+  const pattern = merchantSource.split(/\s+/).slice(0, 3).join(' ').toUpperCase();
 
   saveRule(pattern, ocrPending.categoryId, ocrPending.categoryName);
 

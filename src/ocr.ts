@@ -20,6 +20,7 @@ export interface OcrAnalysis {
   categoryName: string | null;
   confidence: 'high' | 'medium' | 'low';
   reasoning: string;
+  merchantName: string;
 }
 
 // --- Functions ---
@@ -126,7 +127,8 @@ Respond with ONLY a JSON object (no markdown, no explanation):
   "categoryId": "def-456",
   "categoryName": "Subscriptions",
   "confidence": "high",
-  "reasoning": "Netflix monthly subscription charge"
+  "reasoning": "Netflix monthly subscription charge",
+  "merchant": "NETFLIX"
 }
 
 CRITICAL RULES:
@@ -138,7 +140,8 @@ CRITICAL RULES:
 6. categoryName: exact name from the list above, or null
 7. confidence: "high" | "medium" | "low"
 8. reasoning: one short sentence (max 50 words)
-9. If OCR text is unreadable or amount cannot be determined: {"amount": null, "categoryId": null, "categoryName": null, "confidence": "low", "reasoning": "Could not parse screenshot"}`;
+9. merchant: the store or merchant name exactly as it appears in the OCR text (e.g. "NETFLIX", "ACTION", "UBER EATS"). Use empty string "" if no merchant name is found.
+10. If OCR text is unreadable or amount cannot be determined: {"amount": null, "categoryId": null, "categoryName": null, "confidence": "low", "reasoning": "Could not parse screenshot", "merchant": ""}`;
 }
 
 /**
@@ -164,10 +167,11 @@ ${categoryList || '(No categories available)'}
 Match the store/merchant to the best category from the list above. Use the EXACT categoryId and categoryName from the list.
 
 Respond with ONLY valid JSON, no markdown, no explanation:
-{"amount": <number>, "categoryId": "<exact id from list>", "categoryName": "<exact name from list>", "confidence": "high", "reasoning": "<what you see on the receipt>"}
+{"amount": <number>, "categoryId": "<exact id from list>", "categoryName": "<exact name from list>", "confidence": "high", "reasoning": "<what you see on the receipt>", "merchant": "<store or merchant name, or empty string if unknown>"}
 
 Rules:
 - amount must be a positive number (e.g. 199.00, not -199.00)
+- merchant: the store or merchant name exactly as printed on the receipt (e.g. "NETFLIX", "ACTION", "UBER EATS"). Use empty string "" if you cannot identify it.
 - Read the actual receipt in the image. Do NOT make up or guess values.
 - If you cannot read the receipt clearly, set amount to null and confidence to "low"`;
 }
@@ -190,7 +194,7 @@ export async function callAiProvider(prompt: string, images?: string[]): Promise
     if (!config.openaiApiKey) {
       throw new Error('OPENAI_API_KEY is required when AI_PROVIDER=openai');
     }
-    return callOpenAi(config.openaiApiKey, config.openaiModel, prompt);
+    return callOpenAi(config.openaiApiKey, config.openaiModel, prompt, images);
   }
 
   throw new Error('AI_PROVIDER is not configured. Set AI_PROVIDER=ollama or AI_PROVIDER=openai');
@@ -219,6 +223,7 @@ export function parseAiResponse(raw: string): OcrAnalysis {
       categoryName: null,
       confidence: 'low',
       reasoning: 'Failed to parse AI response: not a valid object.',
+      merchantName: '',
     };
   }
 
@@ -229,6 +234,7 @@ export function parseAiResponse(raw: string): OcrAnalysis {
       categoryName: null,
       confidence: 'low',
       reasoning: 'Failed to parse AI response: not a valid object.',
+      merchantName: '',
     };
   }
 
@@ -250,6 +256,7 @@ export function parseAiResponse(raw: string): OcrAnalysis {
     categoryName: typeof record.categoryName === 'string' ? record.categoryName : null,
     confidence: ['high', 'medium', 'low'].includes(record.confidence as string) ? record.confidence as OcrAnalysis['confidence'] : 'low',
     reasoning: typeof record.reasoning === 'string' ? record.reasoning : '',
+    merchantName: typeof record.merchant === 'string' ? record.merchant : '',
   };
 }
 
@@ -329,25 +336,21 @@ export async function processScreenshot(
     let text = '';
     let images: string[] | undefined = undefined;
 
-    if (ocrText === undefined) {
-      if (config.ocrEngine === 'vision') {
-        const imageBuffer = await readFile(imagePath);
-        images = [imageBuffer.toString('base64')];
-        console.log(`[OCR] Vision engine selected. Sending image (${imageBuffer.length} bytes) to AI.`);
-      } else {
-        text = await extractTextFromImage(imagePath, config.ocrLanguage, config.ocrCacheDir);
-        console.log(`[OCR] Extracted text (${text.length} chars): ${text.substring(0, 200)}`);
-      }
+    if (config.ocrEngine === 'vision') {
+      const imageBuffer = await readFile(imagePath);
+      images = [imageBuffer.toString('base64')];
+      text = ocrText ?? '';
+      console.log(`[OCR] Vision engine selected. Sending image (${imageBuffer.length} bytes) to AI.`);
     } else {
-      text = ocrText;
-      console.log(`[OCR] Using provided text (${text.length} chars)`);
+      text = ocrText ?? await extractTextFromImage(imagePath, config.ocrLanguage, config.ocrCacheDir);
+      console.log(`[OCR] Text pipeline (${text.length} chars)`);
     }
     
     const categories = await getCategories();
     console.log(`[OCR] Available categories: ${categories.map((c) => `${c.id}=${c.name}`).join(', ')}`);
     const prompt = images ? buildVisionPrompt(categories) : buildAnalysisPrompt(text, categories);
     const rawResponse = await callAiProvider(prompt, images);
-    console.log(`[OCR] Raw AI response: ${rawResponse.substring(0, 500)}`);
+    console.log(`[OCR] Raw AI response (${rawResponse.length} chars)`);
     const result = parseAiResponse(rawResponse);
     console.log(`[OCR] Parsed result: categoryId=${result.categoryId}, categoryName=${result.categoryName}, amount=${result.amountInCents}`);
     return validateCategoryMatch(result, categories);
@@ -400,10 +403,18 @@ async function callOllama(url: string, model: string, prompt: string, timeoutMs:
  * @returns The response content, or an empty string when no content is available
  * @throws {Error} If the API response is not successful
  */
-async function callOpenAi(apiKey: string, model: string, prompt: string, timeoutMs: number = 60_000): Promise<string> {
+async function callOpenAi(apiKey: string, model: string, prompt: string, images?: string[], timeoutMs: number = 60_000): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
+    const userMessage: Record<string, unknown> = { role: 'user', content: prompt };
+    if (images && images.length > 0) {
+      userMessage.content = [
+        { type: 'text', text: prompt },
+        ...images.map((img) => ({ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${img}` } })),
+      ];
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -414,7 +425,7 @@ async function callOpenAi(apiKey: string, model: string, prompt: string, timeout
         model,
         messages: [
           { role: 'system', content: 'You are an expense categorization assistant. Always respond with valid JSON only.' },
-          { role: 'user', content: prompt },
+          userMessage,
         ],
         temperature: 0.1,
         response_format: { type: 'json_object' },

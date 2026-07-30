@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { buildAnalysisPrompt, parseAiResponse, countAmountsInOcr, validateCategoryMatch } from '../src/ocr';
+import { buildAnalysisPrompt, buildVisionPrompt, parseAiResponse, countAmountsInOcr, validateCategoryMatch } from '../src/ocr';
 import type { Category, OcrAnalysis } from '../src/ocr';
 
 const mockCategories: Category[] = [
@@ -31,6 +31,26 @@ describe('buildAnalysisPrompt', () => {
     const ocrText = 'NETFLIX.COM 15.99 USD';
     const prompt = buildAnalysisPrompt(ocrText, mockCategories);
     expect(prompt).toContain(ocrText);
+  });
+
+  it('includes merchant field in JSON response schema', () => {
+    const prompt = buildAnalysisPrompt('NETFLIX 15.99', mockCategories);
+    expect(prompt).toContain('"merchant"');
+    expect(prompt).toContain('merchant: the store or merchant name');
+  });
+});
+
+describe('buildVisionPrompt', () => {
+  it('includes merchant field in JSON response schema', () => {
+    const prompt = buildVisionPrompt(mockCategories);
+    expect(prompt).toContain('"merchant"');
+    expect(prompt).toContain('merchant: the store or merchant name');
+  });
+
+  it('includes all category IDs and names', () => {
+    const prompt = buildVisionPrompt(mockCategories);
+    expect(prompt).toContain('[cat-1] Food & Dining');
+    expect(prompt).toContain('[cat-2] Subscriptions');
   });
 });
 
@@ -145,6 +165,49 @@ describe('parseAiResponse', () => {
     expect(result.categoryId).toBeNull();
     expect(result.categoryName).toBeNull();
     expect(result.confidence).toBe('low');
+  });
+
+  it('parses merchant from JSON response', () => {
+    const raw = JSON.stringify({
+      amount: 15.99,
+      categoryId: 'cat-2',
+      categoryName: 'Subscriptions',
+      confidence: 'high',
+      reasoning: 'Netflix subscription',
+      merchant: 'NETFLIX',
+    });
+    const result = parseAiResponse(raw);
+    expect(result.merchantName).toBe('NETFLIX');
+  });
+
+  it('defaults merchantName to empty string when merchant not provided', () => {
+    const raw = JSON.stringify({
+      amount: 10.00,
+      categoryId: 'cat-1',
+      categoryName: 'Food',
+      confidence: 'high',
+      reasoning: 'Lunch',
+    });
+    const result = parseAiResponse(raw);
+    expect(result.merchantName).toBe('');
+  });
+
+  it('defaults merchantName to empty string for non-string merchant', () => {
+    const raw = JSON.stringify({
+      amount: 10.00,
+      categoryId: 'cat-1',
+      categoryName: 'Food',
+      confidence: 'high',
+      reasoning: 'Lunch',
+      merchant: 123,
+    });
+    const result = parseAiResponse(raw);
+    expect(result.merchantName).toBe('');
+  });
+
+  it('returns empty merchantName on fallback paths', () => {
+    const result = parseAiResponse('not json');
+    expect(result.merchantName).toBe('');
   });
 });
 

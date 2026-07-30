@@ -1,7 +1,7 @@
 # Actual Budget Telegram Bot
 
 > **Status:** Stable
-> **Version:** v1.4.22 — Tested with 149 unit tests and Docker deployment.
+> **Version:** v1.4.24 — Tested with 163 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
@@ -64,8 +64,8 @@ ALLOWED_TELEGRAM_USER_IDS=
 | `OLLAMA_MODEL` | No (default `qwen3:8b`) | Ollama model name (Use `qwen2.5-vl:7b` for Vision OCR!) |
 | `OLLAMA_KEEP_ALIVE` | No (default `0`) | Keep alive timeout for Ollama models |
 | `OPENAI_API_KEY` | No | OpenAI API key (required when `AI_PROVIDER=openai`) |
-| `OPENAI_MODEL` | No (default `gpt-4o`) | OpenAI model name |
-| `OCR_ENGINE` | No (default `tesseract`) | Engine to use for reading receipts (`tesseract` or `vision`) |
+| `OPENAI_MODEL` | No (default `gpt-4o`) | OpenAI model name (supports vision when `OCR_ENGINE=vision`) |
+| `OCR_ENGINE` | No (default `tesseract`) | Engine to use for reading receipts (`tesseract` or `vision`). Vision mode sends the image directly to the AI model — works with both Ollama VL models and OpenAI `gpt-4o`. |
 | `OCR_LANGUAGE` | No (default `eng`) | Tesseract OCR language (e.g. `ita+eng`) |
 | `OCR_CACHE_DIR` | No (default `<ACTUAL_DATA_DIR>/ocr-cache`) | OCR traineddata cache directory |
 

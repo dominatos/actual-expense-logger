@@ -45,6 +45,10 @@ describe('parseAmountToCents', () => {
     expect(parseAmountToCents('0,01')).toBe(-1);
   });
 
+  it('parses ungrouped comma-decimal "12,34" to -1234', () => {
+    expect(parseAmountToCents('12,34')).toBe(-1234);
+  });
+
   // --- Trailing minus ---
   it('parses "42.00-" to -4200', () => {
     expect(parseAmountToCents('42.00-')).toBe(-4200);

@@ -46,6 +46,16 @@ describe('rules', () => {
       writeFileSync(TEST_RULES_PATH, JSON.stringify(rules), 'utf8');
       expect(loadRules()).toEqual(rules.rules);
     });
+
+    it('throws when categoryName is blank', () => {
+      const rules = {
+        rules: [
+          { id: '1', pattern: 'NETFLIX', categoryId: 'cat-1', categoryName: '', createdAt: '2026-01-01T00:00:00Z' },
+        ],
+      };
+      writeFileSync(TEST_RULES_PATH, JSON.stringify(rules), 'utf8');
+      expect(() => loadRules()).toThrow(/Malformed rules file/);
+    });
   });
 
   describe('saveRule', () => {
@@ -84,6 +94,32 @@ describe('rules', () => {
     it('rejects whitespace-only pattern', () => {
       expect(() => saveRule('   ', 'cat-1', 'Food')).toThrow('Rule pattern must not be empty or whitespace-only');
       expect(loadRules()).toEqual([]);
+    });
+
+    it('rejects empty categoryId', () => {
+      expect(() => saveRule('NETFLIX', '', 'Subscriptions')).toThrow('Rule categoryId must not be empty or whitespace-only');
+      expect(loadRules()).toEqual([]);
+    });
+
+    it('rejects whitespace-only categoryId', () => {
+      expect(() => saveRule('NETFLIX', '  ', 'Subscriptions')).toThrow('Rule categoryId must not be empty or whitespace-only');
+      expect(loadRules()).toEqual([]);
+    });
+
+    it('rejects empty categoryName', () => {
+      expect(() => saveRule('NETFLIX', 'cat-1', '')).toThrow('Rule categoryName must not be empty or whitespace-only');
+      expect(loadRules()).toEqual([]);
+    });
+
+    it('rejects whitespace-only categoryName', () => {
+      expect(() => saveRule('NETFLIX', 'cat-1', '  ')).toThrow('Rule categoryName must not be empty or whitespace-only');
+      expect(loadRules()).toEqual([]);
+    });
+
+    it('trims whitespace from categoryId and categoryName', () => {
+      const rule = saveRule('netflix', '  cat-1  ', '  Subscriptions  ');
+      expect(rule.categoryId).toBe('cat-1');
+      expect(rule.categoryName).toBe('Subscriptions');
     });
   });
 
