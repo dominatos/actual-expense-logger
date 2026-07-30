@@ -94,6 +94,7 @@ export interface AppConfig {
   ocrLanguage: string;
   ocrCacheDir: string;
   ocrEngine: 'tesseract' | 'vision';
+  ocrRulesEnabled: boolean;
 }
 
 let _config: AppConfig | null = null;
@@ -161,6 +162,8 @@ export function loadConfig(): AppConfig {
   } else {
     throw new Error(`Invalid OCR_ENGINE value "${ocrEngineRaw}": must be "tesseract" or "vision"`);
   }
+  const ocrRulesEnabledRaw = optional('OCR_RULES_ENABLED', 'false').toLowerCase();
+  const ocrRulesEnabled = ocrRulesEnabledRaw === 'true' || ocrRulesEnabledRaw === '1' || ocrRulesEnabledRaw === 'yes';
 
   _config = {
     telegramBotToken,
@@ -181,6 +184,7 @@ export function loadConfig(): AppConfig {
     ocrLanguage,
     ocrCacheDir,
     ocrEngine,
+    ocrRulesEnabled,
   };
 
   return _config;

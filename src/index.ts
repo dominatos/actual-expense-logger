@@ -277,7 +277,7 @@ async function sendOcrSuggestion(ctx: BotContext, analysis: OcrAnalysis, ocrText
   ];
 
   const hasMerchant = analysis.merchantName.trim().length > 0;
-  if (ocrText.trim() || hasMerchant) {
+  if (config.ocrRulesEnabled && (ocrText.trim() || hasMerchant)) {
     buttons.push([{ text: 'Create rule for this merchant', callback_data: 'ocr_create_rule' }]);
   }
 
@@ -315,7 +315,7 @@ bot.on('photo', async (ctx) => {
     try {
       // Always extract text for rule matching — works in both Tesseract and Vision modes
       ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
-      matchedRule = matchRule(ocrText);
+      matchedRule = config.ocrRulesEnabled ? matchRule(ocrText) : null;
 
     if (matchedRule && captionAmount !== null) {
       // Rule matched + caption override: use both
@@ -548,6 +548,11 @@ bot.action('ocr_cancel', async (ctx) => {
 
 // OCR Confirmation: Create Rule
 bot.action('ocr_create_rule', async (ctx) => {
+  if (!config.ocrRulesEnabled) {
+    await ctx.answerCbQuery('OCR rules are disabled.', { show_alert: true });
+    return;
+  }
+
   const ocrPending = ctx.session?.ocrPending;
   if (!ocrPending) {
     await ctx.answerCbQuery('Session expired.', { show_alert: true });
@@ -576,6 +581,11 @@ bot.action('ocr_create_rule', async (ctx) => {
 
 // /rules command — list and manage saved rules
 bot.command('rules', async (ctx) => {
+  if (!config.ocrRulesEnabled) {
+    await ctx.reply('OCR rules are currently disabled.');
+    return;
+  }
+
   const rules = loadRules();
 
   if (rules.length === 0) {
@@ -595,6 +605,11 @@ bot.command('rules', async (ctx) => {
 
 // Rule deletion
 bot.action(/^rule_delete_(.+)$/, async (ctx) => {
+  if (!config.ocrRulesEnabled) {
+    await ctx.answerCbQuery('OCR rules are disabled.', { show_alert: true });
+    return;
+  }
+
   const ruleId = ctx.match[1];
   const rules = loadRules();
   const rule = rules.find((r) => r.id === ruleId);
