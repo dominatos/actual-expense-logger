@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.28] - 2026-07-30
+
+### Changed
+
+- **Documentation Update** — Explicitly noted in the `README.md` that Vision mode has only been tested with local Ollama models (e.g. `qwen2.5-vl`). OpenAI `gpt-4o` vision support is implemented but untested due to API costs.
+
 ## [1.4.27] - 2026-07-30
 
 ### Fixed
