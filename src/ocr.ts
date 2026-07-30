@@ -194,7 +194,7 @@ export async function callAiProvider(prompt: string, images?: string[]): Promise
     if (!config.openaiApiKey) {
       throw new Error('OPENAI_API_KEY is required when AI_PROVIDER=openai');
     }
-    return callOpenAi(config.openaiApiKey, config.openaiModel, prompt, images);
+    return callOpenAi(config.openaiApiKey, config.openaiModel, prompt, images, 120_000);
   }
 
   throw new Error('AI_PROVIDER is not configured. Set AI_PROVIDER=ollama or AI_PROVIDER=openai');

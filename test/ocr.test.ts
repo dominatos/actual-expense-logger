@@ -246,6 +246,7 @@ describe('validateCategoryMatch', () => {
       categoryName: 'Action',
       confidence: 'high',
       reasoning: 'Test',
+      merchantName: '',
     };
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBe('cat-4');
@@ -259,6 +260,7 @@ describe('validateCategoryMatch', () => {
       categoryName: 'Action',
       confidence: 'high',
       reasoning: 'Test',
+      merchantName: '',
     };
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBe('cat-4');
@@ -272,6 +274,7 @@ describe('validateCategoryMatch', () => {
       categoryName: 'Nonexistent',
       confidence: 'high',
       reasoning: 'Test',
+      merchantName: '',
     };
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBeNull();
@@ -285,6 +288,7 @@ describe('validateCategoryMatch', () => {
       categoryName: null, // orphaned ID
       confidence: 'high',
       reasoning: 'Test',
+      merchantName: '',
     };
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBe('cat-2');
@@ -298,6 +302,7 @@ describe('validateCategoryMatch', () => {
       categoryName: 'action',
       confidence: 'high',
       reasoning: 'Test',
+      merchantName: '',
     };
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBe('cat-4');
@@ -310,6 +315,7 @@ describe('validateCategoryMatch', () => {
       categoryName: null,
       confidence: 'low',
       reasoning: 'Could not parse',
+      merchantName: '',
     };
     const validated = validateCategoryMatch(result, mockCategories);
     expect(validated.categoryId).toBeNull();
