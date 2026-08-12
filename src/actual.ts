@@ -1,5 +1,5 @@
 import api from '@actual-app/api';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync, statSync } from 'fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmdirSync, statSync, rmSync } from 'fs';
 import { join, relative } from 'path';
 import { loadConfig } from './config';
 
@@ -27,8 +27,7 @@ export async function initActual(): Promise<void> {
 }
 
 /**
- * Sync local changes to the server and shut down the API client.
- * Must always be called before exiting the process to avoid data loss.
+ * Synchronizes local changes with the server and shuts down the API client.
  */
 export async function finalize(): Promise<void> {
   console.log('Syncing changes to server...');
@@ -43,9 +42,9 @@ export async function finalize(): Promise<void> {
 }
 
 /**
- * Create a backup of the local budget database before writing.
- * Copies SQLite files from the data directory to a timestamped backup folder.
- * Keeps only the last 5 backups to avoid disk bloat.
+ * Creates a timestamped backup of SQLite database files in the data directory and retains the five newest backups.
+ *
+ * @param dataDir - The directory containing the local budget database files.
  */
 function createBackup(dataDir: string): void {
   const backupDir = join(dataDir, 'backups');
@@ -91,11 +90,7 @@ function createBackup(dataDir: string): void {
     const oldest = backups.shift()!;
     const oldestPath = join(backupDir, oldest);
     try {
-      const contents = readdirSync(oldestPath);
-      for (const f of contents) {
-        unlinkSync(join(oldestPath, f));
-      }
-      rmdirSync(oldestPath);
+      rmSync(oldestPath, { recursive: true, force: true });
       console.log(`Rotated old backup: ${oldest}`);
     } catch (err) {
       console.error(`Failed to rotate backup ${oldest}:`, err);
@@ -125,8 +120,12 @@ export async function getAccounts(): Promise<Array<{ id: string; name: string }>
 }
 
 /**
- * Add a transaction with pre-write backup and post-write sync.
- * Safety lifecycle: backup -> addTransaction -> sync
+ * Adds a transaction, creates a pre-write backup, and synchronizes the changes.
+ *
+ * @param accountId - The account receiving the transaction
+ * @param categoryId - The category assigned to the transaction
+ * @param amountInCents - The transaction amount in cents
+ * @param payeeName - The transaction payee
  */
 export async function addTransaction(
   accountId: string,
@@ -142,8 +141,9 @@ export async function addTransaction(
   createBackup(config.actualDataDir);
 
   // Step 2: Add transaction
-  console.log('Adding transaction...');
-  await api.addTransactions(accountId, [
+  console.log(`Adding transaction: accountId=${accountId}, category=${categoryId}, date=${date}`);
+
+  const transIds = await api.addTransactions(accountId, [
     {
       date,
       amount: amountInCents,
@@ -151,6 +151,18 @@ export async function addTransaction(
       payee_name: payeeName,
     },
   ]);
+
+  // Step 2b: Force-update category to bypass Actual Budget's runRules
+  // (rules may override the category we set during addTransactions)
+  if (transIds && transIds.length > 0) {
+    const transId = transIds[0];
+    console.log(`Updating category for transaction ${transId} to ${categoryId}`);
+    try {
+      await api.updateTransaction(transId, { category: categoryId });
+    } catch (err) {
+      console.error(`Failed to update category for transaction ${transId}:`, err);
+    }
+  }
 
   // Step 3: Sync to server immediately
   console.log('Syncing to server...');

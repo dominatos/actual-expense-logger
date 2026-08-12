@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import * as dotenv from 'dotenv';
+import { parseUserIds } from './utils';
 
 dotenv.config();
 
@@ -22,6 +23,12 @@ export function readSecret(envKey: string): string | undefined {
   return process.env[envKey];
 }
 
+/**
+ * Retrieves a required environment variable or secret.
+ *
+ * @param envKey - The environment variable key to retrieve
+ * @returns The secret value
+ */
 export function requireSecret(envKey: string): string {
   const value = readSecret(envKey);
   if (!value) {
@@ -30,23 +37,18 @@ export function requireSecret(envKey: string): string {
   return value;
 }
 
+/**
+ * Retrieves an environment variable or uses a fallback value.
+ *
+ * @param envKey - The environment variable name
+ * @param defaultValue - The value to use when the environment variable is unavailable or empty
+ * @returns The configured environment value or `defaultValue`
+ */
 export function optional(envKey: string, defaultValue: string): string {
   return readSecret(envKey) || process.env[envKey] || defaultValue;
 }
 
-function parseUserIds(raw: string): number[] {
-  if (!raw) return [];
-  const tokens = raw.split(',').map((s) => s.trim()).filter(Boolean);
-  const ids: number[] = [];
-  for (const token of tokens) {
-    const n = Number(token);
-    if (!Number.isSafeInteger(n) || n <= 0) {
-      throw new Error(`Invalid ALLOWED_TELEGRAM_USER_IDS token: "${token}"`);
-    }
-    ids.push(n);
-  }
-  return ids;
-}
+
 
 export interface AccountEntry {
   name: string;
@@ -82,10 +84,26 @@ export interface AppConfig {
   actualFilePassword: string | undefined;
   actualPayeeName: string;
   allowedUserIds: number[];
+  // OCR + AI screenshot processing (optional — feature disabled when aiProvider is undefined)
+  aiProvider: 'ollama' | 'openai' | undefined;
+  ollamaUrl: string;
+  ollamaModel: string;
+  ollamaKeepAlive: string | number;
+  openaiApiKey: string | undefined;
+  openaiModel: string;
+  ocrLanguage: string;
+  ocrCacheDir: string;
+  ocrEngine: 'tesseract' | 'vision';
+  ocrRulesEnabled: boolean;
 }
 
 let _config: AppConfig | null = null;
 
+/**
+ * Loads the application configuration from environment variables and secrets, caching the result for subsequent calls.
+ *
+ * @returns The application configuration
+ */
 export function loadConfig(): AppConfig {
   if (_config) return _config;
 
@@ -115,6 +133,38 @@ export function loadConfig(): AppConfig {
     readSecret('ALLOWED_TELEGRAM_USER_IDS') || process.env.ALLOWED_TELEGRAM_USER_IDS || ''
   );
 
+  // OCR + AI configuration (optional)
+  const aiProviderRaw = optional('AI_PROVIDER', '').toLowerCase();
+  let aiProvider: 'ollama' | 'openai' | undefined;
+  if (aiProviderRaw === '') {
+    aiProvider = undefined;
+  } else if (aiProviderRaw === 'ollama') {
+    aiProvider = 'ollama';
+  } else if (aiProviderRaw === 'openai') {
+    aiProvider = 'openai';
+  } else {
+    throw new Error(`Invalid AI_PROVIDER value "${aiProviderRaw}": must be "ollama", "openai", or unset`);
+  }
+  const ollamaUrl = optional('OLLAMA_URL', 'http://host.docker.internal:11434/api/generate');
+  const ollamaModel = optional('OLLAMA_MODEL', 'qwen3:8b');
+  const ollamaKeepAliveRaw = optional('OLLAMA_KEEP_ALIVE', '0');
+  const ollamaKeepAlive = !isNaN(Number(ollamaKeepAliveRaw)) ? Number(ollamaKeepAliveRaw) : ollamaKeepAliveRaw;
+  const openaiApiKey = readSecret('OPENAI_API_KEY') || undefined;
+  const openaiModel = optional('OPENAI_MODEL', 'gpt-4o');
+  const ocrLanguage = optional('OCR_LANGUAGE', 'eng');
+  const ocrCacheDir = optional('OCR_CACHE_DIR', `${actualDataDir}/ocr-cache`);
+  const ocrEngineRaw = optional('OCR_ENGINE', 'tesseract').toLowerCase();
+  let ocrEngine: 'tesseract' | 'vision';
+  if (ocrEngineRaw === 'vision') {
+    ocrEngine = 'vision';
+  } else if (ocrEngineRaw === 'tesseract') {
+    ocrEngine = 'tesseract';
+  } else {
+    throw new Error(`Invalid OCR_ENGINE value "${ocrEngineRaw}": must be "tesseract" or "vision"`);
+  }
+  const ocrRulesEnabledRaw = optional('OCR_RULES_ENABLED', 'false').toLowerCase();
+  const ocrRulesEnabled = ocrRulesEnabledRaw === 'true' || ocrRulesEnabledRaw === '1' || ocrRulesEnabledRaw === 'yes';
+
   _config = {
     telegramBotToken,
     actualServerUrl,
@@ -125,6 +175,16 @@ export function loadConfig(): AppConfig {
     actualFilePassword,
     actualPayeeName,
     allowedUserIds,
+    aiProvider,
+    ollamaUrl,
+    ollamaModel,
+    ollamaKeepAlive,
+    openaiApiKey,
+    openaiModel,
+    ocrLanguage,
+    ocrCacheDir,
+    ocrEngine,
+    ocrRulesEnabled,
   };
 
   return _config;

@@ -62,16 +62,16 @@ describe('Bot Logic (unit tests)', () => {
       expect(ctx.reply).not.toHaveBeenCalled();
     });
 
-    it('blocks user when ID is not in the list', async () => {
+    it('blocks user when ID is not in the list and sends unauthorized message', async () => {
       const allowedUserIds = [123, 456];
-      const ctx = { from: { id: 789 }, reply: vi.fn() } as unknown as Context;
+      const ctx = { from: { id: 789 }, reply: vi.fn().mockResolvedValue(undefined) } as unknown as Context;
       const next = vi.fn();
 
       const middleware = createAccessControlMiddleware(allowedUserIds);
       await middleware(ctx, next);
 
       expect(next).not.toHaveBeenCalled();
-      expect(ctx.reply).not.toHaveBeenCalled();
+      expect(ctx.reply).toHaveBeenCalledWith(expect.stringContaining("You are not authorized to use this bot"));
     });
 
     it('blocks silently when ctx.from is undefined and list is non-empty', async () => {

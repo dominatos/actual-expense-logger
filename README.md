@@ -1,6 +1,7 @@
 # Actual Budget Telegram Bot
 
-> **Status:** v1.3.1 — Tested with 66 unit tests and Docker deployment.
+> **Status:** Stable
+> **Version:** v1.4.29 — Tested with 163 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
@@ -17,6 +18,10 @@ This bot allows you to quickly log expenses into Actual Budget directly from Tel
 - **Docker Secrets:** Sensitive credentials can be injected via Docker secrets instead of `.env` files.
 - **Encrypted Budgets:** Supports Actual Budget file encryption via `ACTUAL_FILE_PASSWORD`.
 - **Graceful Shutdown:** SIGINT/SIGTERM handlers ensure sync + shutdown always run (try/finally).
+- **OCR + AI Screenshot Processing:** Send a payment screenshot and the bot extracts the amount via OCR, then uses AI to match it to an existing category. Confirm before saving.
+- **Caption Override:** Send a screenshot with a caption like `15.50` to override the AI-detected amount.
+- **Auto-Categorization Rules:** Save rules (merchant pattern → category) so future screenshots are matched instantly without AI.
+- **`/rules` Command:** List and delete saved rules.
 
 ## Prerequisites
 - Node.js (v22+) if running locally.
@@ -54,6 +59,16 @@ ALLOWED_TELEGRAM_USER_IDS=
 | `ACTUAL_FILE_PASSWORD` | No | Password for encrypted budget files |
 | `ACTUAL_PAYEE_NAME` | No (default `Telegram Bot`) | Payee name on created transactions |
 | `ALLOWED_TELEGRAM_USER_IDS` | Yes | Comma-separated Telegram user IDs to allow (bot blocks all if empty) |
+| `AI_PROVIDER` | No | `ollama` or `openai` — enables screenshot processing when set |
+| `OCR_RULES_ENABLED` | No (default `false`) | Enables creating rules to auto-categorize receipts by merchant name |
+| `OLLAMA_URL` | No (default `http://host.docker.internal:11434/api/generate`) | Ollama API endpoint |
+| `OLLAMA_MODEL` | No (default `qwen3:8b`) | Ollama model name (Use `qwen2.5-vl:7b` for Vision OCR!) |
+| `OLLAMA_KEEP_ALIVE` | No (default `0`) | Keep alive timeout for Ollama models |
+| `OPENAI_API_KEY` | No | OpenAI API key (required when `AI_PROVIDER=openai`) |
+| `OPENAI_MODEL` | No (default `gpt-4o`) | OpenAI model name (supports vision when `OCR_ENGINE=vision`) |
+| `OCR_ENGINE` | No (default `tesseract`) | Engine to use for reading receipts (`tesseract` or `vision`). Vision mode sends the image directly to the AI model. **Note:** Vision mode has only been tested with Ollama VL models (like `qwen2.5-vl`). While OpenAI `gpt-4o` support is implemented, it has not been tested by the author due to API costs. If you test it with OpenAI and have feedback, please open an issue! |
+| `OCR_LANGUAGE` | No (default `eng`) | Tesseract OCR language (e.g. `ita+eng`) |
+| `OCR_CACHE_DIR` | No (default `<ACTUAL_DATA_DIR>/ocr-cache`) | OCR traineddata cache directory |
 
 ## Docker Secrets (Production)
 

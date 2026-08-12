@@ -4,7 +4,11 @@ import { readSecret, requireSecret, optional, parseAccounts } from '../src/confi
 import { parseUserIds } from '../src/utils';
 
 // We test readSecret/requireSecret/optional directly since they're now exported.
-// loadConfig() is tested via integration (it reads real env vars).
+// loadConfig() is directly covered by this unit suite, including its dynamic-import and module-reset setup.
+
+vi.mock('dotenv', () => ({
+  config: vi.fn(),
+}));
 
 describe('readSecret', () => {
   const originalEnv = { ...process.env };
@@ -147,3 +151,139 @@ describe('parseAccounts', () => {
     expect(parseAccounts(',')).toEqual([]);
   });
 });
+
+describe('loadConfig', () => {
+  const originalEnv = { ...process.env };
+
+  // All env keys that loadConfig() reads, plus their _FILE variants for Docker secrets.
+  const CONFIG_KEYS = [
+    'TELEGRAM_BOT_TOKEN',
+    'ACTUAL_SERVER_URL',
+    'ACTUAL_PASSWORD',
+    'ACTUAL_SYNC_ID',
+    'ACTUAL_ACCOUNTS',
+    'ACTUAL_DEFAULT_ACCOUNT_ID',
+    'ACTUAL_DATA_DIR',
+    'ACTUAL_FILE_PASSWORD',
+    'ACTUAL_PAYEE_NAME',
+    'ALLOWED_TELEGRAM_USER_IDS',
+    'AI_PROVIDER',
+    'OLLAMA_URL',
+    'OLLAMA_MODEL',
+    'OPENAI_API_KEY',
+    'OPENAI_MODEL',
+    'OCR_LANGUAGE',
+    'OCR_CACHE_DIR',
+  ];
+
+  let loadConfig: typeof import('../src/config').loadConfig;
+
+  beforeEach(async () => {
+    process.env = { ...originalEnv };
+    // Remove all config-relevant keys so tests start from a clean state
+    for (const key of CONFIG_KEYS) {
+      delete process.env[key];
+      delete process.env[`${key}_FILE`];
+    }
+    vi.resetModules();
+    const configModule = await import('../src/config');
+    loadConfig = configModule.loadConfig;
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('loads valid configuration with default fallback account', async () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    
+    const config = loadConfig();
+    
+    expect(config.telegramBotToken).toBe('bot-token');
+    expect(config.actualServerUrl).toBe('http://actual');
+    expect(config.actualPassword).toBe('password');
+    expect(config.actualSyncId).toBe('sync-id');
+    expect(config.accounts).toEqual([{ name: 'Default', id: 'default-account' }]);
+    expect(config.actualDataDir).toBe('/app/data');
+    expect(config.actualPayeeName).toBe('Telegram Bot');
+    expect(config.allowedUserIds).toEqual([]);
+    expect(config.aiProvider).toBeUndefined();
+  });
+
+  it('loads custom ACTUAL_DATA_DIR and derives ocrCacheDir from it', () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    process.env['ACTUAL_DATA_DIR'] = '/custom/data/path';
+    
+    const config = loadConfig();
+    
+    expect(config.actualDataDir).toBe('/custom/data/path');
+    expect(config.ocrCacheDir).toBe('/custom/data/path/ocr-cache');
+  });
+
+  it('loads valid configuration with multiple accounts', async () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_ACCOUNTS'] = 'Cash:uuid-1,Bank:uuid-2';
+    
+    const config = loadConfig();
+    
+    expect(config.accounts).toEqual([
+      { name: 'Cash', id: 'uuid-1' },
+      { name: 'Bank', id: 'uuid-2' }
+    ]);
+  });
+
+  it('throws if required variables are missing', async () => {
+    delete process.env['TELEGRAM_BOT_TOKEN'];
+    expect(() => loadConfig()).toThrow(/Missing required environment variable/);
+  });
+
+  it('throws if ACTUAL_ACCOUNTS is invalid', async () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    process.env['ACTUAL_ACCOUNTS'] = ', ,';
+    expect(() => loadConfig()).toThrow(/contains no valid "name:uuid" entries/);
+  });
+
+  it('loads OCR + AI configuration when aiProvider is set', async () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    process.env['AI_PROVIDER'] = 'ollama';
+    process.env['OLLAMA_MODEL'] = 'test-model';
+    
+    const config = loadConfig();
+    
+    expect(config.aiProvider).toBe('ollama');
+    expect(config.ollamaModel).toBe('test-model');
+    // Default values
+    expect(config.ocrLanguage).toBe('eng');
+  });
+
+  it('throws if AI_PROVIDER is an invalid value', async () => {
+    process.env['TELEGRAM_BOT_TOKEN'] = 'bot-token';
+    process.env['ACTUAL_SERVER_URL'] = 'http://actual';
+    process.env['ACTUAL_PASSWORD'] = 'password';
+    process.env['ACTUAL_SYNC_ID'] = 'sync-id';
+    process.env['ACTUAL_DEFAULT_ACCOUNT_ID'] = 'default-account';
+    process.env['AI_PROVIDER'] = 'banana';
+
+    expect(() => loadConfig()).toThrow(/Invalid AI_PROVIDER value/);
+  });
+});
+

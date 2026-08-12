@@ -45,6 +45,10 @@ describe('parseAmountToCents', () => {
     expect(parseAmountToCents('0,01')).toBe(-1);
   });
 
+  it('parses ungrouped comma-decimal "12,34" to -1234', () => {
+    expect(parseAmountToCents('12,34')).toBe(-1234);
+  });
+
   // --- Trailing minus ---
   it('parses "42.00-" to -4200', () => {
     expect(parseAmountToCents('42.00-')).toBe(-4200);
@@ -111,6 +115,15 @@ describe('parseAmountToCents', () => {
   it('rounds "0.001" to -0 (rounds down)', () => {
     // 0.001 * 100 = 0.1, rounded = 0
     expect(Object.is(parseAmountToCents('0.001'), -0)).toBe(true);
+  });
+
+  // --- Locale-aware grouped formats (regression) ---
+  it('parses European grouped "1.234,56" to -123456', () => {
+    expect(parseAmountToCents('1.234,56')).toBe(-123456);
+  });
+
+  it('parses US grouped "1,234.56" to -123456', () => {
+    expect(parseAmountToCents('1,234.56')).toBe(-123456);
   });
 });
 
