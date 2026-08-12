@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.29] - 2026-08-12
+
+### Fixed
+
+- **Dead code removal** — Removed unused `text = ocrText ?? ''` assignment in the vision branch of `processScreenshot()` (`src/ocr.ts`). The `text` variable is never read when the vision engine is active, since `buildVisionPrompt()` does not accept a text parameter. No behavior change; 163 tests pass.
+- **OCR Tesseract gate** — Added conditional gate on `config.ocrRulesEnabled` and `config.ocrEngine` before calling `extractTextFromImage()` in the photo handler (`src/index.ts`). Vision mode with rules disabled now skips Tesseract extraction entirely, avoiding an unnecessary ~1-2s load. Tesseract mode always extracts text for analysis regardless of rules setting.
+
 ## [1.4.28] - 2026-07-30
 
 ### Changed

@@ -313,9 +313,15 @@ bot.on('photo', async (ctx) => {
     let matchedRule: ReturnType<typeof matchRule> = null;
 
     try {
-      // Always extract text for rule matching — works in both Tesseract and Vision modes
-      ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
-      matchedRule = config.ocrRulesEnabled ? matchRule(ocrText) : null;
+      if (config.ocrRulesEnabled) {
+        ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
+        matchedRule = matchRule(ocrText);
+      } else if (config.ocrEngine !== 'vision') {
+        ocrText = await extractTextFromImage(tmpPath, config.ocrLanguage, config.ocrCacheDir);
+        matchedRule = null;
+      } else {
+        matchedRule = null;
+      }
 
     if (matchedRule && captionAmount !== null) {
       // Rule matched + caption override: use both
