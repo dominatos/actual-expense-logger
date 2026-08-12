@@ -339,7 +339,6 @@ export async function processScreenshot(
     if (config.ocrEngine === 'vision') {
       const imageBuffer = await readFile(imagePath);
       images = [imageBuffer.toString('base64')];
-      text = ocrText ?? '';
       console.log(`[OCR] Vision engine selected. Sending image (${imageBuffer.length} bytes) to AI.`);
     } else {
       text = ocrText ?? await extractTextFromImage(imagePath, config.ocrLanguage, config.ocrCacheDir);
