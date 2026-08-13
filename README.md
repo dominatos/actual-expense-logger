@@ -1,7 +1,7 @@
 # Actual Budget Telegram Bot
 
 > **Status:** Stable
-> **Version:** v1.5.1 — Tested with 167 unit tests and Docker deployment.
+> **Version:** v1.5.2 — Tested with 169 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 

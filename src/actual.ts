@@ -156,6 +156,25 @@ export async function addTransaction(
   console.log('Syncing to server...');
   await api.sync();
   console.log('Transaction saved and synced.');
+
+  // Step 4: Verify transaction category was not overridden by server rules
+  try {
+    const savedTransactions = await api.getTransactions(accountId, date, date);
+    const overridden = savedTransactions.find(
+      (t) => t.amount === amountInCents && t.category !== categoryId
+    );
+
+    if (overridden) {
+      console.warn(
+        `⚠️ ALERT: Actual Budget server rule overrode transaction ${overridden.id} category from "${categoryId}" to "${overridden.category}"! Restoring...`
+      );
+      await api.updateTransaction(overridden.id, { category: categoryId });
+      await api.sync();
+      console.log(`Successfully restored category for transaction ${overridden.id} back to "${categoryId}".`);
+    }
+  } catch (err) {
+    console.error('Failed to verify/restore transaction category:', err);
+  }
 }
 
 /**
@@ -170,22 +189,29 @@ export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
     const payees = await api.getPayees();
     const categories = await getCategories();
 
-    const matchedPayee = payees.find(
+    const matchedPayees = payees.filter(
       (p) => p.name.toLowerCase() === payeeName.toLowerCase()
     );
-    const payeeId = matchedPayee?.id;
+    const payeeIds = new Set(matchedPayees.map((p) => p.id));
 
     const conflicts: string[] = [];
 
     for (const rule of rules) {
       if (rule.tombstone) continue;
 
-      const matchesPayee = rule.conditions?.some((cond) => {
-        if (cond.field === 'payee' || cond.field === 'imported_payee') {
+      const matchesPayee = rule.conditions?.some((cond: any) => {
+        const field = String(cond?.field ?? '').toLowerCase();
+        if (
+          field === 'description' ||
+          field === 'payee' ||
+          field === 'payee_name' ||
+          field === 'imported_payee'
+        ) {
           if (typeof cond.value === 'string') {
+            const val = cond.value;
             return (
-              cond.value.toLowerCase() === payeeName.toLowerCase() ||
-              (payeeId !== undefined && cond.value === payeeId)
+              val.toLowerCase() === payeeName.toLowerCase() ||
+              payeeIds.has(val)
             );
           }
         }
@@ -195,8 +221,8 @@ export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
       if (!matchesPayee) continue;
 
       const setsCategoryAction = rule.actions?.find(
-        (act): act is { field: string; op: 'set'; value: unknown } =>
-          'field' in act && act.field === 'category' && act.op === 'set'
+        (act: any): act is { field: string; op: 'set'; value: unknown } =>
+          act && typeof act === 'object' && act.field === 'category' && act.op === 'set'
       );
 
       if (setsCategoryAction && setsCategoryAction.value) {

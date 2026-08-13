@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   getAccounts: vi.fn().mockResolvedValue([]),
   getRules: vi.fn().mockResolvedValue([]),
   getPayees: vi.fn().mockResolvedValue([]),
+  getTransactions: vi.fn().mockResolvedValue([]),
+  updateTransaction: vi.fn().mockResolvedValue(undefined),
   loadConfig: vi.fn().mockReturnValue({
     telegramBotToken: 'test-token',
     actualServerUrl: 'http://localhost:5006',
@@ -37,6 +39,8 @@ vi.mock('@actual-app/api', () => ({
     getAccounts: mocks.getAccounts,
     getRules: mocks.getRules,
     getPayees: mocks.getPayees,
+    getTransactions: mocks.getTransactions,
+    updateTransaction: mocks.updateTransaction,
   },
 }));
 
@@ -309,15 +313,33 @@ describe('checkRuleConflicts', () => {
     expect(result[0]).toContain('Rule ID rule-1 forces Payee "Telegram Bot" → Category "Food"');
   });
 
+  it('detects rules matching description field with payee UUID that force a category', async () => {
+    mocks.getRules.mockResolvedValue([
+      {
+        id: 'rule-1',
+        conditions: [{ field: 'description', op: 'is', value: 'payee-uuid-1' }],
+        actions: [{ field: 'category', op: 'set', value: 'cat-food' }],
+      },
+    ]);
+    mocks.getPayees.mockResolvedValue([{ id: 'payee-uuid-1', name: 'Telegram Bot' }]);
+    mocks.getCategories.mockResolvedValue([
+      { id: 'cat-food', name: 'Food', is_income: false, hidden: false, group_id: 'g1' },
+    ]);
+
+    const result = await checkRuleConflicts('Telegram Bot');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toContain('Rule ID rule-1 forces Payee "Telegram Bot" → Category "Food"');
+  });
+
   it('ignores rules for different payees', async () => {
     mocks.getRules.mockResolvedValue([
       {
         id: 'rule-2',
-        conditions: [{ field: 'payee_name', op: 'is', value: 'Uber' }],
+        conditions: [{ field: 'description', op: 'is', value: 'other-uuid' }],
         actions: [{ field: 'category', op: 'set', value: 'cat-transport' }],
       },
     ]);
-    mocks.getPayees.mockResolvedValue([{ id: 'p2', name: 'Uber' }]);
+    mocks.getPayees.mockResolvedValue([{ id: 'payee-uuid-1', name: 'Telegram Bot' }]);
     mocks.getCategories.mockResolvedValue([]);
 
     const result = await checkRuleConflicts('Telegram Bot');
@@ -325,3 +347,44 @@ describe('checkRuleConflicts', () => {
   });
 });
 
+describe('addTransaction category self-healing', () => {
+  const testDir = '/tmp/test-backup-actual-heal';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mkdirSync(testDir, { recursive: true });
+    writeFileSync(join(testDir, 'test.sqlite'), 'fake-sqlite-data');
+  });
+
+  afterEach(() => {
+    try {
+      rmSync(testDir, { recursive: true, force: true });
+    } catch {}
+  });
+
+  it('restores category if server rule overrode it post-sync', async () => {
+    mocks.loadConfig.mockReturnValue({
+      telegramBotToken: 'test-token',
+      actualServerUrl: 'http://localhost:5006',
+      actualPassword: 'test-password',
+      actualSyncId: 'test-sync-id',
+      accounts: [{ name: 'Default', id: 'test-account-id' }],
+      actualDataDir: testDir,
+      actualFilePassword: undefined,
+      actualPayeeName: 'Telegram Bot',
+      allowedUserIds: [],
+    });
+
+    mocks.getTransactions.mockResolvedValue([
+      { id: 'trans-overridden', amount: -1500, category: 'wrong-cat-food' },
+    ]);
+
+    await addTransaction('test-account-id', 'desired-cat-transport', -1500, 'Telegram Bot');
+
+    expect(mocks.updateTransaction).toHaveBeenCalledWith('trans-overridden', {
+      category: 'desired-cat-transport',
+    });
+    // Should sync twice: once for add, once for category restoration
+    expect(mocks.sync).toHaveBeenCalledTimes(2);
+  });
+});
