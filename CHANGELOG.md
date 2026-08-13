@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.30] - 2026-08-13
+
+### Fixed
+
+- **Category always set to Food bug** — Removed broken `updateTransaction` workaround in `src/actual.ts` that attempted to update category using return value of `addTransactions`. Since `addTransactions` returns string `"ok"`, the code attempted `updateTransaction("o", ...)`, which silently failed while Actual Budget's payee rules overrode the transaction category to Food.
+
 ## [1.4.29] - 2026-08-12
 
 ### Fixed

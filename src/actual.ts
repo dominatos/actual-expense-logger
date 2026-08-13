@@ -143,7 +143,7 @@ export async function addTransaction(
   // Step 2: Add transaction
   console.log(`Adding transaction: accountId=${accountId}, category=${categoryId}, date=${date}`);
 
-  const transIds = await api.addTransactions(accountId, [
+  await api.addTransactions(accountId, [
     {
       date,
       amount: amountInCents,
@@ -151,18 +151,6 @@ export async function addTransaction(
       payee_name: payeeName,
     },
   ]);
-
-  // Step 2b: Force-update category to bypass Actual Budget's runRules
-  // (rules may override the category we set during addTransactions)
-  if (transIds && transIds.length > 0) {
-    const transId = transIds[0];
-    console.log(`Updating category for transaction ${transId} to ${categoryId}`);
-    try {
-      await api.updateTransaction(transId, { category: categoryId });
-    } catch (err) {
-      console.error(`Failed to update category for transaction ${transId}:`, err);
-    }
-  }
 
   // Step 3: Sync to server immediately
   console.log('Syncing to server...');
