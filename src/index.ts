@@ -660,8 +660,12 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
       ctx.session.accountId = undefined;
     }
 
+    const categories = await getCategories();
+    const categoryName = categories.find((c) => c.id === categoryId)?.name;
+    const categoryLabel = categoryName ? ` (${categoryName})` : '';
+
     const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
-    await ctx.editMessageText(`Transaction of ${displayAmount} saved successfully!`);
+    await ctx.editMessageText(`Transaction of ${displayAmount}${categoryLabel} saved successfully!`);
   } catch (error) {
     console.error('Error adding transaction:', error);
     await ctx.reply('Failed to save the transaction.');
