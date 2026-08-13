@@ -12,7 +12,7 @@ vi.mock('../src/config', () => ({
   })
 }));
 
-import { createAccessControlMiddleware } from '../src/index';
+import { createAccessControlMiddleware, notifyOtherUsers } from '../src/index';
 
 // We test the bot's behavior indirectly by testing the utility functions
 // and the mocked actual API. Full bot integration tests require a Telegram
@@ -272,6 +272,15 @@ describe('Bot Logic (unit tests)', () => {
       }
 
       expect(buttons).toHaveLength(0);
+    });
+  });
+
+  describe('Notification logic (notifyOtherUsers)', () => {
+    it('does nothing if ctx.from is undefined', async () => {
+      const ctx = { from: undefined } as unknown as Context;
+      await expect(
+        notifyOtherUsers(ctx, { amountInCents: -1500, categoryName: 'Food', accountId: 'acc1' })
+      ).resolves.not.toThrow();
     });
   });
 });

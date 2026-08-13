@@ -1,7 +1,7 @@
 # Actual Budget Telegram Bot
 
 > **Status:** Stable
-> **Version:** v1.4.31 — Tested with 163 unit tests and Docker deployment.
+> **Version:** v1.5.0 — Tested with 164 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
@@ -12,6 +12,7 @@ This bot allows you to quickly log expenses into Actual Budget directly from Tel
 - **International Formats:** Supports US (`1,234.56`) and European (`1.234,56`) number formats.
 - **Multiple Accounts:** Configure multiple Actual Budget accounts and select which one to use per transaction. Single-account setups work automatically with no selection step.
 - **Category Selection:** An inline keyboard appears allowing you to pick a category for the expense.
+- **Multi-User Notifications:** Automatically sends a Telegram notification to all other authorized users when a new expense is logged.
 - **Idempotent Transactions:** In-flight guard prevents duplicate submissions from double-taps.
 - **Safety-First Design:** Every transaction is backed up recursively, then synced to the server immediately.
 - **Access Control:** Optionally restrict bot usage to specific Telegram user IDs (validates input at startup).

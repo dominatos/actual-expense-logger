@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-13
+
+### Added
+
+- **Multi-user transaction notifications** — The bot now automatically notifies all other authorized Telegram users in `ALLOWED_TELEGRAM_USER_IDS` whenever a user logs a new transaction (manual entry or OCR confirmation). The notification contains sender name, amount, category, and account.
+
 ## [1.4.31] - 2026-08-13
 
 ### Added

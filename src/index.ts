@@ -73,6 +73,39 @@ export function createAccessControlMiddleware(allowedUserIds: number[]) {
   };
 }
 
+/**
+ * Sends a notification to all other authorized Telegram users when a user adds a transaction.
+ *
+ * @param ctx - The bot context containing sender information
+ * @param details - The transaction details (amount in cents, category name, account ID)
+ */
+export async function notifyOtherUsers(
+  ctx: BotContext,
+  details: { amountInCents: number; categoryName: string; accountId: string }
+): Promise<void> {
+  const currentUserId = ctx.from?.id;
+  if (!currentUserId) return;
+
+  const senderName = ctx.from?.username
+    ? `@${ctx.from.username}`
+    : [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(' ') || `User ${currentUserId}`;
+
+  const accountName = config.accounts.find((a) => a.id === details.accountId)?.name ?? details.accountId;
+  const displayAmount = (Math.abs(details.amountInCents) / 100).toFixed(2);
+  const categoryDisplay = details.categoryName || 'Uncategorized';
+
+  const notification = `💸 New transaction added by ${senderName}:\nAmount: ${displayAmount}\nCategory: ${categoryDisplay}\nAccount: ${accountName}`;
+
+  for (const userId of config.allowedUserIds) {
+    if (userId !== currentUserId) {
+      bot.telegram.sendMessage(userId, notification).catch((err) => {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.warn(`⚠️ Could not send transaction notification to user ${userId}: ${errMsg}`);
+      });
+    }
+  }
+}
+
 // Access control: if ALLOWED_TELEGRAM_USER_IDS is set, only those users can use the bot
 bot.use(createAccessControlMiddleware(config.allowedUserIds));
 
@@ -491,6 +524,12 @@ bot.action('ocr_confirm', async (ctx) => {
     console.log(`[OCR CONFIRM] Saving transaction: categoryId=${ocrPending.categoryId}, categoryName=${ocrPending.categoryName}, amount=${ocrPending.amountInCents}`);
     await addTransaction(accountId, ocrPending.categoryId, ocrPending.amountInCents, config.actualPayeeName);
 
+    notifyOtherUsers(ctx, {
+      amountInCents: ocrPending.amountInCents,
+      categoryName: ocrPending.categoryName,
+      accountId,
+    }).catch((err) => console.error('Failed to send notification:', err));
+
     if (ctx.session) {
       ctx.session.ocrPending = undefined;
       ctx.session.amountInCents = undefined;
@@ -663,6 +702,12 @@ bot.action(/^cat_(.+)$/, async (ctx) => {
     const categories = await getCategories();
     const categoryName = categories.find((c) => c.id === categoryId)?.name;
     const categoryLabel = categoryName ? ` (${categoryName})` : '';
+
+    notifyOtherUsers(ctx, {
+      amountInCents,
+      categoryName: categoryName ?? '',
+      accountId,
+    }).catch((err) => console.error('Failed to send notification:', err));
 
     const displayAmount = (Math.abs(amountInCents) / 100).toFixed(2);
     await ctx.editMessageText(`Transaction of ${displayAmount}${categoryLabel} saved successfully!`);
