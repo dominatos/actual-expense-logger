@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   addTransactions: vi.fn().mockResolvedValue('ok'),
   getCategories: vi.fn().mockResolvedValue([]),
   getAccounts: vi.fn().mockResolvedValue([]),
+  getRules: vi.fn().mockResolvedValue([]),
+  getPayees: vi.fn().mockResolvedValue([]),
   loadConfig: vi.fn().mockReturnValue({
     telegramBotToken: 'test-token',
     actualServerUrl: 'http://localhost:5006',
@@ -33,6 +35,8 @@ vi.mock('@actual-app/api', () => ({
     addTransactions: mocks.addTransactions,
     getCategories: mocks.getCategories,
     getAccounts: mocks.getAccounts,
+    getRules: mocks.getRules,
+    getPayees: mocks.getPayees,
   },
 }));
 
@@ -41,7 +45,7 @@ vi.mock('../src/config', () => ({
 }));
 
 // Import after mocks are set up
-import { initActual, finalize, getCategories, getAccounts, addTransaction } from '../src/actual';
+import { initActual, finalize, getCategories, getAccounts, addTransaction, checkRuleConflicts } from '../src/actual';
 
 describe('initActual', () => {
   beforeEach(() => {
@@ -272,3 +276,52 @@ describe('addTransaction', () => {
     expect(backups.length).toBeLessThanOrEqual(5);
   });
 });
+
+describe('checkRuleConflicts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns empty array when no rules exist', async () => {
+    mocks.getRules.mockResolvedValue([]);
+    mocks.getPayees.mockResolvedValue([]);
+    mocks.getCategories.mockResolvedValue([]);
+
+    const result = await checkRuleConflicts('Telegram Bot');
+    expect(result).toEqual([]);
+  });
+
+  it('detects rules matching payee that force a category', async () => {
+    mocks.getRules.mockResolvedValue([
+      {
+        id: 'rule-1',
+        conditions: [{ field: 'payee', op: 'is', value: 'Telegram Bot' }],
+        actions: [{ field: 'category', op: 'set', value: 'cat-food' }],
+      },
+    ]);
+    mocks.getPayees.mockResolvedValue([{ id: 'p1', name: 'Telegram Bot' }]);
+    mocks.getCategories.mockResolvedValue([
+      { id: 'cat-food', name: 'Food', is_income: false, hidden: false, group_id: 'g1' },
+    ]);
+
+    const result = await checkRuleConflicts('Telegram Bot');
+    expect(result).toHaveLength(1);
+    expect(result[0]).toContain('Rule ID rule-1 forces Payee "Telegram Bot" → Category "Food"');
+  });
+
+  it('ignores rules for different payees', async () => {
+    mocks.getRules.mockResolvedValue([
+      {
+        id: 'rule-2',
+        conditions: [{ field: 'payee_name', op: 'is', value: 'Uber' }],
+        actions: [{ field: 'category', op: 'set', value: 'cat-transport' }],
+      },
+    ]);
+    mocks.getPayees.mockResolvedValue([{ id: 'p2', name: 'Uber' }]);
+    mocks.getCategories.mockResolvedValue([]);
+
+    const result = await checkRuleConflicts('Telegram Bot');
+    expect(result).toEqual([]);
+  });
+});
+

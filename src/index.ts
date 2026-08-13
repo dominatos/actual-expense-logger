@@ -1,7 +1,7 @@
 import { Telegraf, session, Context } from 'telegraf';
 import { loadConfig } from './config';
 import { parseAmountToCents } from './utils';
-import { initActual, getCategories, getAccounts, addTransaction, finalize } from './actual';
+import { initActual, getCategories, getAccounts, addTransaction, finalize, checkRuleConflicts } from './actual';
 import { processScreenshot, countAmountsInOcr, extractTextFromImage, downloadTelegramPhoto, buildAnalysisPrompt, callAiProvider, parseAiResponse, type OcrAnalysis } from './ocr';
 import { loadRules, saveRule, deleteRule, matchRule, type Rule } from './rules';
 import { unlink } from 'node:fs/promises';
@@ -745,6 +745,23 @@ async function start(): Promise<void> {
 
     console.log('Starting Telegram bot...');
     
+    // Check for conflicting server rules
+    try {
+      const conflicts = await checkRuleConflicts(config.actualPayeeName);
+      if (conflicts.length > 0) {
+        console.warn(`⚠️ Warning: Found ${conflicts.length} conflicting server rules in Actual Budget!`);
+        const conflictMsg = `⚠️ WARNING: Actual Budget has server-side rule(s) overriding category for payee "${config.actualPayeeName}":\n\n` +
+          conflicts.map((c) => `• ${c}`).join('\n') +
+          `\n\nPlease delete these rule(s) in Actual Budget (More → Rules) so transactions are categorized accurately!`;
+
+        for (const userId of config.allowedUserIds) {
+          bot.telegram.sendMessage(userId, conflictMsg).catch(() => {});
+        }
+      }
+    } catch (ruleErr) {
+      console.error('Failed to check server rule conflicts during startup:', ruleErr);
+    }
+
     for (const userId of config.allowedUserIds) {
       bot.telegram.sendMessage(userId, `Bot started/restarted.\n\n${START_MESSAGE}`).catch(err => {
         const errMsg = err instanceof Error ? err.message : String(err);

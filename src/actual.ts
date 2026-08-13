@@ -157,3 +157,59 @@ export async function addTransaction(
   await api.sync();
   console.log('Transaction saved and synced.');
 }
+
+/**
+ * Checks if Actual Budget has any active server rules for payeeName that assign a fixed category.
+ *
+ * @param payeeName - Payee name to check for rule conflicts
+ * @returns Array of descriptions for any conflicting rules found
+ */
+export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
+  try {
+    const rules = await api.getRules();
+    const payees = await api.getPayees();
+    const categories = await getCategories();
+
+    const matchedPayee = payees.find(
+      (p) => p.name.toLowerCase() === payeeName.toLowerCase()
+    );
+    const payeeId = matchedPayee?.id;
+
+    const conflicts: string[] = [];
+
+    for (const rule of rules) {
+      if (rule.tombstone) continue;
+
+      const matchesPayee = rule.conditions?.some((cond) => {
+        if (cond.field === 'payee' || cond.field === 'imported_payee') {
+          if (typeof cond.value === 'string') {
+            return (
+              cond.value.toLowerCase() === payeeName.toLowerCase() ||
+              (payeeId !== undefined && cond.value === payeeId)
+            );
+          }
+        }
+        return false;
+      });
+
+      if (!matchesPayee) continue;
+
+      const setsCategoryAction = rule.actions?.find(
+        (act): act is { field: string; op: 'set'; value: unknown } =>
+          'field' in act && act.field === 'category' && act.op === 'set'
+      );
+
+      if (setsCategoryAction && setsCategoryAction.value) {
+        const catId = String(setsCategoryAction.value);
+        const catName = categories.find((c) => c.id === catId)?.name ?? catId;
+        conflicts.push(`Rule ID ${rule.id} forces Payee "${payeeName}" → Category "${catName}"`);
+      }
+    }
+
+    return conflicts;
+  } catch (err) {
+    console.error('Failed to check rule conflicts:', err);
+    return [];
+  }
+}
+
