@@ -185,9 +185,12 @@ export async function addTransaction(
  */
 export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
   try {
+    await api.sync();
     const rules = await api.getRules();
     const payees = await api.getPayees();
     const categories = await getCategories();
+
+    console.log(`[RULE CHECK] Found ${rules.length} rules, ${payees.length} payees`);
 
     const matchedPayees = payees.filter(
       (p) => p.name.toLowerCase() === payeeName.toLowerCase()
@@ -228,6 +231,7 @@ export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
       if (setsCategoryAction && setsCategoryAction.value) {
         const catId = String(setsCategoryAction.value);
         const catName = categories.find((c) => c.id === catId)?.name ?? catId;
+        console.log(`[RULE CHECK] Conflict: Rule ${rule.id} → Category "${catName}"`);
         conflicts.push(`Rule ID ${rule.id} forces Payee "${payeeName}" → Category "${catName}"`);
       }
     }
