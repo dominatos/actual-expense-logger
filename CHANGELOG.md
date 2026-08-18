@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.4] - 2026-08-18
+
+### Fixed
+
+- **Rule conflict detection sync** — Added `api.sync()` call before `api.getRules()` in `checkRuleConflicts()` to ensure the local cache is up to date before scanning for conflicting rules. Added debug logging to show total rules/payees count and conflict details.
+
 ## [1.5.3] - 2026-08-18
 
 ### Added
