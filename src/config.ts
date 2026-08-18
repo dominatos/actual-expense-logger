@@ -84,6 +84,7 @@ export interface AppConfig {
   actualFilePassword: string | undefined;
   actualPayeeName: string;
   allowedUserIds: number[];
+  welcomeMessageEnabled: boolean;
   // OCR + AI screenshot processing (optional — feature disabled when aiProvider is undefined)
   aiProvider: 'ollama' | 'openai' | undefined;
   ollamaUrl: string;
@@ -133,6 +134,9 @@ export function loadConfig(): AppConfig {
     readSecret('ALLOWED_TELEGRAM_USER_IDS') || process.env.ALLOWED_TELEGRAM_USER_IDS || ''
   );
 
+  const welcomeMessageEnabledRaw = optional('WELCOME_MESSAGE_ENABLED', 'false').toLowerCase();
+  const welcomeMessageEnabled = welcomeMessageEnabledRaw === 'true' || welcomeMessageEnabledRaw === '1' || welcomeMessageEnabledRaw === 'yes';
+
   // OCR + AI configuration (optional)
   const aiProviderRaw = optional('AI_PROVIDER', '').toLowerCase();
   let aiProvider: 'ollama' | 'openai' | undefined;
@@ -175,6 +179,7 @@ export function loadConfig(): AppConfig {
     actualFilePassword,
     actualPayeeName,
     allowedUserIds,
+    welcomeMessageEnabled,
     aiProvider,
     ollamaUrl,
     ollamaModel,

@@ -762,11 +762,13 @@ async function start(): Promise<void> {
       console.error('Failed to check server rule conflicts during startup:', ruleErr);
     }
 
-    for (const userId of config.allowedUserIds) {
-      bot.telegram.sendMessage(userId, `Bot started/restarted.\n\n${START_MESSAGE}`).catch(err => {
-        const errMsg = err instanceof Error ? err.message : String(err);
-        console.warn(`⚠️ Could not send startup message to user ${userId} (they may need to start a chat with the bot first): ${errMsg}`);
-      });
+    if (config.welcomeMessageEnabled) {
+      for (const userId of config.allowedUserIds) {
+        bot.telegram.sendMessage(userId, `Bot started/restarted.\n\n${START_MESSAGE}`).catch(err => {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          console.warn(`⚠️ Could not send startup message to user ${userId} (they may need to start a chat with the bot first): ${errMsg}`);
+        });
+      }
     }
 
     console.log('Bot is running.');

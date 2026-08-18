@@ -1,7 +1,7 @@
 # Actual Budget Telegram Bot
 
 > **Status:** Stable
-> **Version:** v1.5.2 — Tested with 169 unit tests and Docker deployment.
+> **Version:** v1.5.3 — Tested with 169 unit tests and Docker deployment.
 
 A Telegram bot written in TypeScript that integrates with the [Actual Budget](https://actualbudget.org/) API (`@actual-app/api`).
 
@@ -47,6 +47,7 @@ ACTUAL_DATA_DIR=/app/data
 ACTUAL_FILE_PASSWORD=your_budget_encryption_password
 ACTUAL_PAYEE_NAME=Telegram Bot
 ALLOWED_TELEGRAM_USER_IDS=
+# WELCOME_MESSAGE_ENABLED=false
 ```
 
 | Variable | Required | Description |
@@ -61,6 +62,7 @@ ALLOWED_TELEGRAM_USER_IDS=
 | `ACTUAL_FILE_PASSWORD` | No | Password for encrypted budget files |
 | `ACTUAL_PAYEE_NAME` | No (default `Telegram Bot`) | Payee name on created transactions |
 | `ALLOWED_TELEGRAM_USER_IDS` | Yes | Comma-separated Telegram user IDs to allow (bot blocks all if empty) |
+| `WELCOME_MESSAGE_ENABLED` | No (default `false`) | Send welcome message to all authorized users on bot startup. The `/start` command always works regardless of this setting. |
 | `AI_PROVIDER` | No | `ollama` or `openai` — enables screenshot processing when set |
 | `OCR_RULES_ENABLED` | No (default `false`) | Enables creating rules to auto-categorize receipts by merchant name |
 | `OLLAMA_URL` | No (default `http://host.docker.internal:11434/api/generate`) | Ollama API endpoint |
