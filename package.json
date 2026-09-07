@@ -1,6 +1,6 @@
 {
   "name": "actual-expense-logger",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "description": "Telegram bot for adding transactions to Actual Budget",
   "main": "dist/index.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@actual-app/api": "^26.8.1",
+    "@actual-app/api": "^26.9.0",
     "dotenv": "^17.4.2",
     "telegraf": "^4.16.3",
     "tesseract.js": "^7.0.0"
