@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@actual-app/api": "^26.10.0",
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.8",
     "telegraf": "^4.16.3",
     "tesseract.js": "^7.0.0"
   },
