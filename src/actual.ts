@@ -202,7 +202,7 @@ export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
     for (const rule of rules) {
       if (rule.tombstone) continue;
 
-      const matchesPayee = rule.conditions?.some((cond: any) => {
+      const matchesPayee = rule.conditions?.some((cond) => {
         const field = String(cond?.field ?? '').toLowerCase();
         if (
           field === 'description' ||
@@ -224,8 +224,7 @@ export async function checkRuleConflicts(payeeName: string): Promise<string[]> {
       if (!matchesPayee) continue;
 
       const setsCategoryAction = rule.actions?.find(
-        (act: any): act is { field: string; op: 'set'; value: unknown } =>
-          act && typeof act === 'object' && act.field === 'category' && act.op === 'set'
+        (act) => act.op === 'set' && act.field === 'category'
       );
 
       if (setsCategoryAction && setsCategoryAction.value) {
