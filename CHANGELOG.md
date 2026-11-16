@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.7] - 2026-11-16
+
+### Fixed
+
+- **Docker build** — Replaced `npm install` with `npm ci --ignore-scripts` in the builder stage and `npm ci --omit=dev --ignore-scripts` in the production stage. `better-sqlite3` 13.x ships bundled prebuilds and needs no lifecycle scripts; npm 10 on Alpine incorrectly invoked `node-gyp`, which failed without Python/build tools. The Docker image now builds successfully.
+
 ## [1.5.6] - 2026-11-16
 
 ### Changed
